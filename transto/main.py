@@ -1,32 +1,19 @@
 import functools
 import io
 import hashlib
-import os
 import logging
-import sys
 
-import gspread
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 import pandas as pd
 import yaml
+
+from transto.auth import gsuite as auth_gsuite
 
 
 logger = logging.getLogger('transto')
 
 
 SPREADO_ID = '1laIR3SmaKnxCg4CeNPGyzhb04NOiMSfD_lDymsGD5wE'
-
-
-def auth_gsuite():
-    oauth_creds_path = os.environ.get('GSUITE_OAUTH_CREDS')
-    if not oauth_creds_path:
-        logger.error('You must export your GCP oAuth path as GSUITE_OAUTH_CREDS')
-        sys.exit(2)
-
-    return gspread.oauth(
-        credentials_filename=oauth_creds_path,
-        authorized_user_filename='authorized_user.json'
-    )
 
 
 @functools.lru_cache(maxsize=1)
