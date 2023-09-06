@@ -1,4 +1,5 @@
 import io
+import hashlib
 import os
 import logging
 import sys
@@ -66,8 +67,10 @@ def bom(file: io.BufferedReader):
     # Drop Category now we're done with it
     df = df.drop(columns=['Category'])
 
+    df['hash'] = df.apply(lambda x: hashlib.sha256(f"{x['Date']}{x['Amount']}{x['source']}".encode('utf8')).hexdigest(), axis=1)
+
     # Sort the column order to match target
-    df = df.reindex(['Date', 'Amount', 'source', 'topcat', 'seccat', 'searchterm'], axis=1)
+    df = df.reindex(['hash', 'Date', 'Amount', 'source', 'topcat', 'seccat', 'searchterm'], axis=1)
 
     gc = auth_gsuite()
     spreado = gc.open_by_key(SPREADO_ID)
