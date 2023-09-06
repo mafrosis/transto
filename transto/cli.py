@@ -5,7 +5,7 @@ import logging
 import click
 
 
-from transto.main import main
+from transto.main import bom as bom_, nab as nab_
 
 
 logger = logging.getLogger('transto')
@@ -24,10 +24,28 @@ def cli(debug):
 
 @cli.command()
 @click.argument('file', type=click.File('rb'))
-def nab(file: io.BufferedReader):
+def bom(file: io.BufferedReader):
     '''
-    Categorise CSV transactions
+    Categorise BOM CSV
+
+    \b
+    1. View the CC account page
+    2. Select "All" transactions
+    3. Scroll to the bottom of the page
+    4. Select "Include categories"
+    5. Click "Export Transaction History"
 
     FILE - Raw CSV of bank transactions
     '''
-    main(file)
+    bom_(file)
+
+
+@cli.command()
+@click.argument('file', type=click.File('rb'))
+def nab(file: io.BufferedReader):
+    '''
+    Categorise NAB CSV
+
+    FILE - Raw CSV of bank transactions
+    '''
+    nab_(file)
