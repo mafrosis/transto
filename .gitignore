@@ -1,0 +1,12 @@
+build/
+*.cfg
+dist/
+*.egg-info
+*.pyc
+.env
+
+.pytest_cache
+venv
+
+client_secret_*.apps.googleusercontent.com.json
+authorized_user.json

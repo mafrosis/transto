@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools >= 40.6.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "transto"
+description = "Bank transaction categorisation"
+dynamic = ["version", "readme"]
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Natural Language :: English",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+]
+dependencies = [
+	"click>8.1,<8.2",
+	"pandas>2,<2.1",
+	"google-api-python-client>2,<3",
+	"google-auth-httplib2==0.1.0",
+	"google-auth-oauthlib==0.8.0",
+	"gspread_dataframe>3.3,<3.4",
+	"pyyaml>6",
+]
+
+[project.scripts]
+transto = "transto.cli:cli"
+
+[tool.setuptools.packages.find]
+exclude = ["test*", "venv*"]
+
+[tool.setuptools.package-data]
+transto = ["*.txt", "*.md"]
+
+[tool.setuptools.dynamic]
+version = {attr = "transto.__version__"}
+readme = {file = ["README.md"]}
+
+[tool.distutils.bdist_wheel]
+universal = true
