@@ -5,7 +5,7 @@ import logging
 import click
 
 
-from transto.main import bom as bom_, nab as nab_
+from transto.bom import cc
 
 
 logger = logging.getLogger('transto')
@@ -24,7 +24,7 @@ def cli(debug):
 
 @cli.command()
 @click.argument('file', type=click.File('rb'))
-def bom(file: io.BufferedReader):
+def credit(file: io.BufferedReader):
     '''
     Categorise BOM CSV
 
@@ -37,15 +37,4 @@ def bom(file: io.BufferedReader):
 
     FILE - Raw CSV of bank transactions
     '''
-    bom_(file)
-
-
-@cli.command()
-@click.argument('file', type=click.File('rb'))
-def nab(file: io.BufferedReader):
-    '''
-    Categorise NAB CSV
-
-    FILE - Raw CSV of bank transactions
-    '''
-    nab_(file)
+    cc(file)
