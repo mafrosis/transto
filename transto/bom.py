@@ -10,9 +10,7 @@ def prepare_source(s: pd.Series) -> pd.Series:
     return s.apply(lambda x: " ".join(x.split()))
 
 
-def cc(file: io.BufferedReader):
-    df = pd.read_csv(file, index_col=False)
-
+def bom(df):
     # Create source column for this CSV format
     df.rename(columns={'Description': 'source'}, inplace=True)
 
@@ -27,7 +25,12 @@ def cc(file: io.BufferedReader):
     df['amount'] = df['Debit'].fillna(df['Credit'])
     df = df.drop(columns=['Debit', 'Credit'])
 
-    df = match(df)
+    return match(df)
+
+
+def cc(file: io.BufferedReader):
+    df = pd.read_csv(file, index_col=False)
+    df = bom(df)
 
     # Handle payments
     df.loc[df['Category'] == 'Deposits', ['topcat', 'seccat', 'searchterm']] = ['payment', 'payment', 'Deposits']
@@ -38,4 +41,4 @@ def cc(file: io.BufferedReader):
     # Drop Category now it's finished with
     df = df.drop(columns=['Category'])
 
-    commit(df, 'BOM', 'transactions')
+    commit(df, 'BOM', 'credit')
