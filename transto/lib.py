@@ -78,11 +78,14 @@ def commit(df: pd.DataFrame, provider: str, sheet_name: str):
         # Cast date column to np.datetime64
         upstream['date'] = pd.to_datetime(upstream['date'], format='%Y-%m-%d 00:00:00')
 
-    except pd.errors.EmptyDataError:
+    except (pd.errors.EmptyDataError, KeyError):
         upstream = pd.DataFrame()
 
-    # Filter out rows which have been overriden upstream in gsheets
-    df = df[~df.hash.isin(upstream.loc[upstream.override==1, 'hash'])]
+    try:
+        # Filter out rows which have been overriden upstream in gsheets
+        df = df[~df.hash.isin(upstream.loc[upstream['override']==1, 'hash'])]
+    except KeyError:
+        df.insert(6, 'override', '')
 
     # Combine imported data with upstream
     df = pd.concat([upstream, df], ignore_index=True)
