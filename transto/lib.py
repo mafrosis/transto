@@ -1,25 +1,17 @@
-import functools
 import hashlib
 import logging
 
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 import pandas as pd
-import yaml
 
 from transto.auth import gsuite as auth_gsuite
+from transto.mapping import load_mapping
 
 
 logger = logging.getLogger('transto')
 
 
 SPREADO_ID = '1laIR3SmaKnxCg4CeNPGyzhb04NOiMSfD_lDymsGD5wE'
-
-
-@functools.lru_cache(maxsize=1)
-def load_mapping() -> dict:
-    'Load transaction mapping data'
-    with open('mapping.yaml', encoding='utf8') as f:
-        return yaml.safe_load(f).get('mapping')
 
 
 def match(df):
