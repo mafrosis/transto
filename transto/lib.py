@@ -92,7 +92,7 @@ def commit(df: pd.DataFrame, provider: str, sheet_name: str):
         sheet_name  Name of target sheet
     '''
     # Sort the column order to match target
-    df = df.reindex(['date', 'amount', 'source', 'topcat', 'seccat', 'searchterm'], axis=1)
+    df = df.reindex(columns=['date', 'amount', 'source', 'topcat', 'seccat', 'searchterm'])
 
     # Fix duplicates before hashing
     if df.duplicated().any():

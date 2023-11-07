@@ -32,9 +32,6 @@ def cc(file: io.BufferedReader):
     df = pd.read_csv(file, index_col=False)
     df = bom(df)
 
-    # Drop Category now it's finished with
-    df = df.drop(columns=['Category'])
-
     commit(df, 'BOM', 'credit')
 
 
