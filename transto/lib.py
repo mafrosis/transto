@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import re
 
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 import pandas as pd
@@ -19,8 +20,11 @@ def match(df):
         for topcat, categories in load_mapping().items():
             for seccat, patterns in categories.items():
                 for pat in patterns:
-                    if pat.lower() in searchterm.lower():
-                        return topcat, seccat, pat
+                    try:
+                        if re.search('(.*)'.join(pat.split(' ')), searchterm, re.IGNORECASE):
+                            return topcat, seccat, pat
+                    except re.error:
+                        logger.error('Failed parsing regex: %s', pat)
         return '', '', ''
 
     df['topcat'], df['seccat'], df['searchterm'] = zip(*(df['source'].apply(_match)))
