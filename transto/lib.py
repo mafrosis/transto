@@ -30,6 +30,10 @@ def match(df):
         return '', '', ''
 
     df['topcat'], df['seccat'], df['searchterm'] = zip(*(df['source'].apply(_match)))
+
+    # Any deposit which is not a transfer, is a refund
+    df.loc[(df.amount.gt(0)) & (~df['topcat'].isin(['transfer','income'])), ['topcat', 'seccat', 'searchterm']] = ['transfer', 'refund', 'n/a']
+
     return df
 
 

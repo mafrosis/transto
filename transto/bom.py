@@ -32,9 +32,6 @@ def cc(file: io.BufferedReader):
     df = pd.read_csv(file, index_col=False)
     df = bom(df)
 
-    # Handle payments
-    df.loc[df['Category'] == 'Deposits', ['topcat', 'seccat', 'searchterm']] = ['payment', 'payment', 'Deposits']
-
     # Handle fees
     df.loc[df['Category'].str.contains('Foreign Transaction Fee'), ['topcat', 'seccat', 'searchterm']] = ['bills', 'bankfees', 'FEES']
 
