@@ -6,6 +6,7 @@ import click
 
 
 from transto.bom import cc, offset
+from transto.etrade import main as process_etrade
 from transto.lib import recategorise
 
 
@@ -63,3 +64,18 @@ def current(file: io.BufferedReader):
     FILE - Raw CSV of bank transactions
     '''
     offset(file)
+
+
+@cli.command()
+@click.argument('etrade-export')
+def etrade(etrade_export: str):
+    '''
+    Process the etrade vesting export.
+
+    \b
+    1. Login to etrade.com
+    2. Stock Plan > Holdings > View By Type > Download Expanded
+
+    FILE - Vesting data from etrade
+    '''
+    process_etrade(etrade_export)
