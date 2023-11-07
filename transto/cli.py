@@ -6,6 +6,7 @@ import click
 
 
 from transto.bom import cc, offset
+from transto.lib import recategorise
 
 
 logger = logging.getLogger('transto')
@@ -20,6 +21,12 @@ def cli(debug):
     # Set DEBUG logging based on ENV or --debug CLI flag
     if debug or os.environ.get('DEBUG'):
         logger.setLevel(logging.DEBUG)
+
+
+@cli.command()
+def recat():
+    'Re-categorise all transactions'
+    recategorise()
 
 
 @cli.command()

@@ -115,7 +115,22 @@ def commit(df: pd.DataFrame, provider: str, sheet_name: str):
     # Deduplicate, dropping entries from upstream DataFrame
     df.drop_duplicates(subset=['hash'], keep='last', inplace=True)
 
+    write(sheet, df)
+
+
+def write(sheet, df: pd.DataFrame):
+    'Persist the current DataFrame to gsheets'
     # Deterministic sort
     df = df.sort_values(by=['date','hash'], ascending=False)
 
     set_with_dataframe(sheet, df, resize=True)
+
+
+def recategorise():
+    def recat(sheet_name: str):
+        'Fetch, re-match, push'
+        upstream, sheet = fetch_transactions_sheet(sheet_name)
+        write(sheet, match(upstream))
+
+    for sh in ('credit', 'offset'):
+        recat(sh)
