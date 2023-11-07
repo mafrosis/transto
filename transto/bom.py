@@ -42,3 +42,10 @@ def cc(file: io.BufferedReader):
     df = df.drop(columns=['Category'])
 
     commit(df, 'BOM', 'credit')
+
+
+def offset(file: io.BufferedReader):
+    df = pd.read_csv(file, index_col=False)
+    df = bom(df)
+
+    commit(df, 'BOM', 'offset')

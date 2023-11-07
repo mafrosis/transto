@@ -5,7 +5,7 @@ import logging
 import click
 
 
-from transto.bom import cc
+from transto.bom import cc, offset
 
 
 logger = logging.getLogger('transto')
@@ -38,3 +38,21 @@ def credit(file: io.BufferedReader):
     FILE - Raw CSV of bank transactions
     '''
     cc(file)
+
+
+@cli.command()
+@click.argument('file', type=click.File('rb'))
+def current(file: io.BufferedReader):
+    '''
+    Categorise BOM CSV
+
+    \b
+    1. View the CC account page
+    2. Select "All" transactions
+    3. Scroll to the bottom of the page
+    4. Select "Include categories"
+    5. Click "Export Transaction History"
+
+    FILE - Raw CSV of bank transactions
+    '''
+    offset(file)
