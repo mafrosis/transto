@@ -1,7 +1,9 @@
 import hashlib
 import logging
 import re
+from typing import Tuple
 
+import gspread
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 import pandas as pd
 
@@ -45,6 +47,37 @@ def deduplicate(df: pd.DataFrame):
         prev = f'{row.date}{row.amount}{row.source}'
 
 
+def fetch_transactions_sheet(sheet_name: str) -> Tuple[pd.DataFrame, gspread.Worksheet]:
+    '''
+    Fetch the full set of transactions as a DataFrame
+
+    Params:
+        sheet_name      Name of the gsheet to retrieve
+    '''
+    # Auth
+    gc = auth_gsuite()
+    spreado = gc.open_by_key(SPREADO_ID)
+    sheet = spreado.worksheet(sheet_name)
+
+    try:
+        # Fetch
+        upstream = get_as_dataframe(sheet)
+
+        # Cast date column to np.datetime64
+        upstream['date'] = pd.to_datetime(upstream['date'], format='%Y-%m-%d 00:00:00')
+
+        try:
+            # Filter out rows which have been overriden upstream in gsheets
+            upstream = upstream[~upstream.hash.isin(upstream.loc[upstream['override']==1, 'hash'])]
+        except KeyError:
+            upstream.insert(6, 'override', '')
+
+    except (pd.errors.EmptyDataError, KeyError):
+        upstream = pd.DataFrame()
+
+    return upstream, sheet
+
+
 def commit(df: pd.DataFrame, provider: str, sheet_name: str):
     '''
     Fetch, merge, push data into the upstream Google sheet
@@ -70,26 +103,7 @@ def commit(df: pd.DataFrame, provider: str, sheet_name: str):
         axis=1,
     )
 
-    # Auth
-    gc = auth_gsuite()
-    spreado = gc.open_by_key(SPREADO_ID)
-    sheet = spreado.worksheet(sheet_name)
-
-    try:
-        # Fetch
-        upstream = get_as_dataframe(sheet)
-
-        # Cast date column to np.datetime64
-        upstream['date'] = pd.to_datetime(upstream['date'], format='%Y-%m-%d 00:00:00')
-
-    except (pd.errors.EmptyDataError, KeyError):
-        upstream = pd.DataFrame()
-
-    try:
-        # Filter out rows which have been overriden upstream in gsheets
-        df = df[~df.hash.isin(upstream.loc[upstream['override']==1, 'hash'])]
-    except KeyError:
-        df.insert(6, 'override', '')
+    upstream, sheet = fetch_transactions_sheet(sheet_name)
 
     # Combine imported data with upstream
     df = pd.concat([upstream, df], ignore_index=True)
