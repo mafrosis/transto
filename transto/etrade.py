@@ -5,10 +5,8 @@ import decimal
 from gspread_dataframe import set_with_dataframe
 import pandas as pd
 
+from transto import SPREADO_ID
 from transto.auth import gsuite as auth_gsuite
-
-
-SPREADO_ID = '1laIR3SmaKnxCg4CeNPGyzhb04NOiMSfD_lDymsGD5wE'
 
 
 @dataclasses.dataclass

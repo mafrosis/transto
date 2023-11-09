@@ -7,6 +7,7 @@ import click
 
 from transto.bom import cc, offset
 from transto.etrade import main as process_etrade
+from transto.mapping import write_mapping_sheet_from_yaml, write_yaml_from_mapping_sheet
 from transto.lib import recategorise
 
 
@@ -79,3 +80,20 @@ def etrade(etrade_export: str):
     FILE - Vesting data from etrade
     '''
     process_etrade(etrade_export)
+
+
+@cli.group()
+def mapping():
+    'Subcommands to work with the transaction mapping metadata'
+
+
+@mapping.command()
+def to_yaml():
+    'Write YAML to mapping sheet'
+    write_yaml_from_mapping_sheet()
+
+
+@mapping.command()
+def to_gsheet():
+    'Write mapping sheet from YAML'
+    write_mapping_sheet_from_yaml()
