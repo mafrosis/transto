@@ -1,4 +1,5 @@
 import functools
+from typing import Dict, List
 
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 import pandas as pd
@@ -12,13 +13,28 @@ from transto.auth import gsuite as auth_gsuite
 @functools.lru_cache(maxsize=1)
 def load_mapping() -> dict:
     'Load transaction mapping data'
-    with open('mapping.yaml', encoding='utf8') as f:
-        return yaml.safe_load(f).get('mapping')
+    # Fetch mapping as DataFrame
+    df = get_as_dataframe(_get_mapping_sheet(), usecols=[0,1,2])
+
+    # Convert tablular data to a tree
+    mapping: Dict[str, Dict[str, List[str]]] = {}
+
+    for _, item in df.iterrows():
+        if item['topcat'] not in mapping:
+            mapping[item['topcat']] = {}
+
+        if item['seccat'] not in mapping[item['topcat']]:
+            mapping[item['topcat']][item['seccat']] = []
+
+        mapping[item['topcat']][item['seccat']].append(str(item['searchterm']))
+
+    return mapping
 
 
 def write_mapping_sheet_from_yaml():
     'Read YAML and merge with gsheet data, before updating gsheet'
-    tree = load_mapping()
+    with open('mapping.yaml', encoding='utf8') as f:
+        tree = yaml.safe_load(f).get('mapping')
 
     # Convert YAML tree to a flattened list
     data = [
@@ -40,24 +56,12 @@ def write_mapping_sheet_from_yaml():
         how='outer',
     )
 
-    set_with_dataframe(sheet, merged, include_column_header=False, resize=True)
+    set_with_dataframe(sheet, merged, resize=True)
 
 
 def write_yaml_from_mapping_sheet():
     'Pull gsheet mapping and write to YAML'
-    # Fetch mapping as DataFrame
-    df = get_as_dataframe(_get_mapping_sheet())
-
-    # Convert tablular data to a tree
-    mapping = {}
-    for _, item in df.iterrows():
-        if item[0] not in mapping:
-            mapping[item[0]] = {}
-
-        if item[1] not in mapping[item[0]]:
-            mapping[item[0]][item[1]] = []
-
-        mapping[item[0]][item[1]].append(item[2])
+    mapping = load_mapping()
 
     class Dumper(yaml.Dumper):
         def increase_indent(self, *args, flow=False, **kwargs):  # pylint: disable=unused-argument
