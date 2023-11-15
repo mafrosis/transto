@@ -27,7 +27,13 @@ def match(df):
                         logger.error('Failed parsing regex: %s', pat)
         return '', '', ''
 
-    df['topcat'], df['seccat'], df['searchterm'] = zip(*(df['source'].apply(_match)))
+    # Apply match function against all non-override transactions
+    matched = df[df.override.isnull()].apply(
+        lambda row: _match(row.source), axis=1, result_type='expand'
+    ).rename(
+        columns={0: 'topcat', 1: 'seccat', 2: 'searchterm'}
+    )
+    df.update(matched)
 
     # Any deposit which is not a transfer, is a refund
     df.loc[(df.amount.gt(0)) & (~df['topcat'].isin(['transfer','income'])), ['topcat', 'seccat', 'searchterm']] = ['transfer', 'refund', 'n/a']
@@ -67,12 +73,6 @@ def fetch_transactions_sheet(sheet_name: str) -> Tuple[pd.DataFrame, gspread.Wor
 
         # Cast date column to np.datetime64
         upstream['date'] = pd.to_datetime(upstream['date'], format='%Y-%m-%d 00:00:00')
-
-        try:
-            # Filter out rows which have been overriden upstream in gsheets
-            upstream = upstream[~upstream.hash.isin(upstream.loc[upstream['override']==1, 'hash'])]
-        except KeyError:
-            upstream.insert(6, 'override', '')
 
     except (pd.errors.EmptyDataError, KeyError):
         upstream = pd.DataFrame()
