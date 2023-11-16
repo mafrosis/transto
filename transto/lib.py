@@ -6,6 +6,7 @@ from typing import Tuple
 import gspread
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from gspread_formatting import cellFormat, format_cell_range
+import numpy as np
 import pandas as pd
 
 from transto import SPREADO_ID
@@ -27,6 +28,12 @@ def match(df):
                     except re.error:
                         logger.error('Failed parsing regex: %s', pat)
         return '', '', ''
+
+    if not 'override' in df.columns:
+        df['override'] = np.nan
+
+    if not 'topcat' in df.columns:
+        df = df.reindex(columns=[*df.columns.tolist(), 'topcat', 'seccat', 'searchterm'])
 
     # Apply match function against all non-override transactions
     matched = df[df.override.isnull()].apply(
@@ -119,11 +126,17 @@ def commit(df: pd.DataFrame, provider: str, sheet_name: str):
 
 def write(sheet, df: pd.DataFrame):
     'Persist the current DataFrame to gsheets'
-    # Deterministic sort
-    df = df.sort_values(by=['date','hash'], ascending=False)
+    # Deterministic sort, and clean up index
+    df = df.sort_values(by=['date','hash'], ascending=False).reset_index(drop=True)
+
+    # Add the seccat dropdown formula column, based on the index
+    df['seccat_formula'] = df.apply(
+        lambda row: f"=transpose(filter('mapping-agg'!B:B,'mapping-agg'!A:A=D{row.name+2}))",
+        axis=1,
+    )
 
     # Write the DataFrame to gsheets and escape the plus prefix
-    set_with_dataframe(sheet, df, string_escaping=re.compile(r'^[+].*').search, resize=True)
+    set_with_dataframe(sheet, df, string_escaping=re.compile(r'^[+].*').search)
 
     format_cell_range(sheet, 'A', cellFormat(numberFormat={'type' : 'DATE', 'pattern': 'yyyy-mm-dd'}))
     format_cell_range(sheet, 'B', cellFormat(numberFormat={'type' : 'CURRENCY', 'pattern': '$####.00'}))
