@@ -121,7 +121,8 @@ def write(sheet, df: pd.DataFrame):
     # Deterministic sort
     df = df.sort_values(by=['date','hash'], ascending=False)
 
-    set_with_dataframe(sheet, df, resize=True)
+    # Write the DataFrame to gsheets and escape the plus prefix
+    set_with_dataframe(sheet, df, string_escaping=re.compile(r'^[+].*').search, resize=True)
 
 
 def recategorise():
