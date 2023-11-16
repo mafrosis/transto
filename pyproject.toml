@@ -21,7 +21,8 @@ dependencies = [
 	"google-api-python-client>2,<3",
 	"google-auth-httplib2==0.1.0",
 	"google-auth-oauthlib==0.8.0",
-	"gspread_dataframe>3.3,<3.4",
+	"gspread-dataframe>3.3,<3.4",
+	"gspread-formatting==1.1.2",
 	"pyyaml>6",
 ]
 

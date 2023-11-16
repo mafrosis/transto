@@ -5,6 +5,7 @@ from typing import Tuple
 
 import gspread
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
+from gspread_formatting import cellFormat, format_cell_range
 import pandas as pd
 
 from transto import SPREADO_ID
@@ -72,7 +73,7 @@ def fetch_transactions_sheet(sheet_name: str) -> Tuple[pd.DataFrame, gspread.Wor
         upstream = get_as_dataframe(sheet)
 
         # Cast date column to np.datetime64
-        upstream['date'] = pd.to_datetime(upstream['date'], format='%Y-%m-%d 00:00:00')
+        upstream['date'] = pd.to_datetime(upstream['date'], format='%Y-%m-%d')
 
     except (pd.errors.EmptyDataError, KeyError):
         upstream = pd.DataFrame()
@@ -123,6 +124,10 @@ def write(sheet, df: pd.DataFrame):
 
     # Write the DataFrame to gsheets and escape the plus prefix
     set_with_dataframe(sheet, df, string_escaping=re.compile(r'^[+].*').search, resize=True)
+
+    format_cell_range(sheet, 'A', cellFormat(numberFormat={'type' : 'DATE', 'pattern': 'yyyy-mm-dd'}))
+    format_cell_range(sheet, 'B', cellFormat(numberFormat={'type' : 'CURRENCY', 'pattern': '$####.00'}))
+    format_cell_range(sheet, 'C', cellFormat(numberFormat={'type' : 'TEXT'}))
 
 
 def recategorise():
