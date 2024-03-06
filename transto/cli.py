@@ -68,18 +68,30 @@ def current(file: io.BufferedReader):
 
 
 @cli.command()
-@click.argument('etrade-export')
-def etrade(etrade_export: str):
+@click.argument('vestfile')
+@click.argument('cgfile')
+def etrade(vestfile: str, cgfile: str):
     '''
-    Process the etrade vesting export.
+    Process the etrade vesting & selling reports.
 
     \b
-    1. Login to etrade.com
-    2. Stock Plan > Holdings > View By Type > Download Expanded
+    Vesting report:
+    - At Work > My Account > Benefit History
+    - Download Expanded
 
-    FILE - Vesting data from etrade
+    \b
+    Capital gain report:
+    - At Work > My Account > Gains & Losses
+    - Choose 'Custom Date'
+    - Enter '01/01/2021' as the start date
+    - Apply
+    - Download Expanded
+
+    \b
+    VESTFILE - Vesting report from etrade
+    CGFILE - Gains & Losses report from etrade
     '''
-    process_etrade(etrade_export)
+    process_etrade(vestfile, cgfile)
 
 
 @cli.group()
