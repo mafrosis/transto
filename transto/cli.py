@@ -35,7 +35,7 @@ def recat():
 @click.argument('file', type=click.File('rb'))
 def credit(file: io.BufferedReader):
     '''
-    Categorise BOM CSV
+    Categorise BOM credit account CSV
 
     \b
     1. View the CC account page
@@ -53,7 +53,7 @@ def credit(file: io.BufferedReader):
 @click.argument('file', type=click.File('rb'))
 def current(file: io.BufferedReader):
     '''
-    Categorise BOM CSV
+    Categorise BOM offset account CSV
 
     \b
     1. View the CC account page
