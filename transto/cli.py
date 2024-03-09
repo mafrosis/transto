@@ -5,7 +5,8 @@ import logging
 import click
 
 
-from transto.bom import cc, offset
+from transto.bom import offset
+from transto.hsbc import cc
 from transto.etrade import main as process_etrade
 from transto.mapping import write_mapping_sheet_from_yaml, write_yaml_from_mapping_sheet
 from transto.lib import recategorise
@@ -35,16 +36,17 @@ def recat():
 @click.argument('file', type=click.File('rb'))
 def credit(file: io.BufferedReader):
     '''
-    Categorise BOM credit account CSV
+    Categorise HSBC credit account CSV
 
     \b
-    1. View the CC account page
-    2. Select "All" transactions
+    1. Log into HSBC
+    2. Select the credit card account
     3. Scroll to the bottom of the page
-    4. Select "Include categories"
-    5. Click "Export Transaction History"
+    4. Click "Download"
+    5. Click "Download" on the popup
+    6. Open PDF in Preview, and Export choosing PDF/A format
 
-    FILE - Raw CSV of bank transactions
+    FILE - PDF monthly statement with transactions
     '''
     cc(file)
 
