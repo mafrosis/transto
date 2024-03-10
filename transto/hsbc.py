@@ -1,34 +1,81 @@
+import datetime
 import io
-from typing import List
+import logging
+import os
+import sys
+from typing import Any, List
 
 import pandas as pd
-from py_pdf_parser import tables
-from py_pdf_parser.loaders import load
+from pypdf import PdfReader
 
 from transto.lib import commit, match
 
 
-def parsepdf(file: io.BufferedReader) -> List[List[str]]:
+logger = logging.getLogger('transto')
+
+
+def parsepdf(file: io.BufferedReader) -> List[List[Any]]:
     '''
     Parse statement PDF into list of transactions
     '''
-    doc = load(file, font_mapping={
-        'AAAAAK+UniversLT,9.0': 'table',
-        'AAAAAI+UniversLT-Bold,8.0': 'header',
-        'AAAAAI+UniversLT-Bold,10.0': 'titles',
-    })
+    reader = PdfReader(file)
+    if reader.is_encrypted:
+        hsbc_pdf_password = os.environ.get('HSBC_PDF_PASSWORD')
+        if not hsbc_pdf_password:
+            logger.error('You must export HSBC_PDF_PASSWORD with the password for the PDF file.')
+            sys.exit(2)
+        reader.decrypt(hsbc_pdf_password)
 
-    tsection = doc.sectioning.create_section(
-        name='transactions',
-        start_element=doc.elements.filter_by_font('header').filter_by_text_equal('Transaction Date').extract_single_element(),
-        end_element=doc.elements.filter_by_font('titles').filter_by_text_equal('Promotional Transactions').extract_single_element(),
-        include_last_element=False,
-    )
+    parts: List[List[Any]] = [[]]
 
-    return [
-        t for t in tables.extract_table(tsection.elements.filter_by_font('table'), as_text=True)
-        if t[2] not in ('OPENING BALANCE', 'CLOSING BALANCE')
-    ]
+    def font_matcher(text, _cm, _tm, font_dict, _font_size):
+        'Accumlate text matching named font into list of lists'
+        if isinstance(font_dict, dict) and font_dict.get('/BaseFont') == '/UniversLT':
+            # Create a new list on every newline
+            if text == '\n':
+                parts.append([])
+
+            # Ignore empty lines
+            if not text.strip():
+                return
+
+            parts[len(parts)-1].append(text.strip())
+
+    for i, page in enumerate(reader.pages):
+        if i == 0:
+            continue
+        page.extract_text(visitor_text=font_matcher)
+
+    # Post process into list of transactions
+    transactions = []
+
+    for t in parts:
+        # Handle fee items appended to another transaction
+        if len(t) == 2 and 'fee' in t[0].lower():
+            t.insert(0, '')
+            t.insert(0, transactions[-1][0].strftime('%d/%m/%y'))
+
+        # Skip items with anything other than 3 or 4 columns
+        if len(t) not in (3, 4):
+            continue
+
+        # Add in an extra column where a card number not used for a transaction
+        if len(t) == 3:
+            t.insert(1, '')
+
+        # Skip OPENING BALANCE and CLOSING BALANCE items
+        if t[2].strip() in ('OPENING BALANCE', 'CLOSING BALANCE'):
+            continue
+
+        try:
+            # Skip items where item zero is not a date
+            t[0] = datetime.datetime.strptime(t[0], '%d/%m/%y')
+        except ValueError:
+            continue
+
+        transactions.append(t)
+
+    return transactions
 
 
 def cc(file: io.BufferedReader):
@@ -39,9 +86,24 @@ def cc(file: io.BufferedReader):
     # Date formatting
     df['date'] = pd.to_datetime(df['date'], format='%d/%m/%y')
 
-    # Parse currency
-    df['amount'] = df['amount'].str.extract(r'([0-9.]+)').astype(float)
+    # Drop comma, dollar sign
+    df['amount'] = df['amount'].replace('[$,]', '', regex=True)
+
+    # Extract negative amounts into credits column, dropping negative sign
+    df['credits'] = df[df['amount'].str.startswith('-')]['amount'].replace('[-]', '', regex=True)
+
+    # Extract positive amounts into debits column
+    df['debits'] = df[~df['amount'].str.startswith('-')]['amount']
+
+    # Make debits negative
+    df['debits'] = df['amount'].astype(float) * -1
+
+    # Merge debits and credits into amount column
+    df['amount'] = df['credits'].fillna(df['debits']).astype(float)
+    df.drop(columns=['credits', 'debits'], inplace=True)
 
     df = match(df)
+
+    logger.info('Found %d transactions, and matched %s', len(df), (df['searchterm'].values != '').sum())
 
     commit(df, 'HSBC', 'credit')

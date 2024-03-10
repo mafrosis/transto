@@ -44,7 +44,6 @@ def credit(file: io.BufferedReader):
     3. Scroll to the bottom of the page
     4. Click "Download"
     5. Click "Download" on the popup
-    6. Open PDF in Preview, and Export choosing PDF/A format
 
     FILE - PDF monthly statement with transactions
     '''
