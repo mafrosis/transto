@@ -6,7 +6,6 @@ from typing import Tuple
 import gspread
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from gspread_formatting import cellFormat, format_cell_range
-import numpy as np
 import pandas as pd
 
 from transto import SPREADO_ID
@@ -29,11 +28,13 @@ def match(df):
                         logger.error('Failed parsing regex: %s', pat)
         return '', '', ''
 
+    # Include mandatory columns
     if not 'override' in df.columns:
-        df['override'] = np.nan
-
+        df['override'] = pd.Series(dtype='int')
     if not 'topcat' in df.columns:
-        df = df.reindex(columns=[*df.columns.tolist(), 'topcat', 'seccat', 'searchterm'])
+        df['topcat'] = pd.Series(dtype='str')
+        df['seccat'] = pd.Series(dtype='str')
+        df['searchterm'] = pd.Series(dtype='str')
 
     # Apply match function against all non-override transactions
     matched = df[df.override.isnull()].apply(
