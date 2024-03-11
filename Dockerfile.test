@@ -1,0 +1,9 @@
+FROM ghcr.io/mafrosis/transto:dev
+
+# Install lint, test tools
+COPY requirements-dev.txt /src
+RUN pip install -r requirements-dev.txt
+
+COPY .pylintrc /src
+
+ENTRYPOINT ["pytest"]

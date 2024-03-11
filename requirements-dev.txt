@@ -1,0 +1,8 @@
+pandas-stubs
+pylint
+pytest
+pytest-mypy
+pytest-sugar
+ipdb
+types-click
+types-PyYAML
