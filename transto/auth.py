@@ -1,8 +1,9 @@
 import logging
 import os
-import sys
 
 import gspread
+
+from transto.exceptions import MissingGsuiteOauthCreds
 
 
 logger = logging.getLogger('transto')
@@ -14,8 +15,7 @@ def gsuite():
     '''
     oauth_creds_path = os.environ.get('GSUITE_OAUTH_CREDS')
     if not oauth_creds_path:
-        logger.error('You must export your GCP oAuth path as GSUITE_OAUTH_CREDS')
-        sys.exit(2)
+        raise MissingGsuiteOauthCreds
 
     return gspread.oauth(
         credentials_filename=oauth_creds_path,

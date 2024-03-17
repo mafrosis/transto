@@ -2,12 +2,12 @@ import datetime
 import io
 import logging
 import os
-import sys
 from typing import Any, List
 
 import pandas as pd
 from pypdf import PdfReader
 
+from transto.exceptions import MissingHsbcPdfPassword
 from transto.lib import commit, match
 
 
@@ -22,8 +22,8 @@ def parsepdf(file: io.BufferedReader) -> List[List[Any]]:
     if reader.is_encrypted:
         hsbc_pdf_password = os.environ.get('HSBC_PDF_PASSWORD')
         if not hsbc_pdf_password:
-            logger.error('You must export HSBC_PDF_PASSWORD with the password for the PDF file.')
-            sys.exit(2)
+            raise MissingHsbcPdfPassword
+
         reader.decrypt(hsbc_pdf_password)
 
     parts: List[List[Any]] = [[]]
