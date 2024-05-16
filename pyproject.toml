@@ -1,19 +1,19 @@
 [build-system]
-requires = ["setuptools >= 40.6.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "transto"
-description = "Bank transaction categorisation"
-dynamic = ["version", "readme"]
-requires-python = ">=3.9"
+description = "transto CLI"
+dynamic = ["version"]
+requires-python = ">=3.11"
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Environment :: Console",
-    "Natural Language :: English",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3.10",
+	"Development Status :: 4 - Beta",
+	"Environment :: Console",
+	"Natural Language :: English",
+	"License :: OSI Approved :: MIT License",
+	"Programming Language :: Python",
+	"Programming Language :: Python :: 3.10",
 ]
 dependencies = [
 	"click>8.1,<8.2",
@@ -24,6 +24,7 @@ dependencies = [
 	"google-auth-oauthlib==0.8.0",
 	"gspread-dataframe>3.3,<3.4",
 	"gspread-formatting==1.1.2",
+	"openpyxl>3.1,<3.2",
 	"pypdf==4.1.0",
 	"pyyaml>6",
 ]
@@ -31,15 +32,38 @@ dependencies = [
 [project.scripts]
 transto = "transto.cli:cli"
 
-[tool.setuptools.packages.find]
+##### Hatch
+
+[tool.hatch.version]
+path = "transto/__init__.py"
+
+[tool.hatch.build.targets.sdist]
 exclude = ["test*", "venv*"]
 
-[tool.setuptools.package-data]
-transto = ["*.txt", "*.md"]
+[tool.hatch.metadata]
+allow-direct-references = true
 
-[tool.setuptools.dynamic]
-version = {attr = "transto.__version__"}
-readme = {file = ["README.md"]}
 
-[tool.distutils.bdist_wheel]
-universal = true
+[tool.hatch.envs.default]
+dependencies = ["ipdb"]
+
+[tool.hatch.envs.test]
+dependencies = [
+	"pytest",
+	"pytest-sugar",
+	"pytest-mypy",
+	"types-click",
+]
+
+[tool.hatch.envs.test.scripts]
+test = "pytest --disable-pytest-warnings test"
+mypy = "pytest --mypy transto"
+
+[tool.hatch.envs.lint]
+detached = true  # do not install package
+dependencies = [
+	"pylint",
+]
+
+[tool.hatch.envs.lint.scripts]
+lint = "pylint transto"

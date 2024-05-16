@@ -6,14 +6,5 @@ services:
     build:
       context: .
     environment:
+      - DEBUG
       - TZ=Australia/Melbourne
-
-  test:
-    image: ghcr.io/mafrosis/transto:test
-    build:
-      context: .
-      dockerfile: Dockerfile.test
-    volumes:
-      - ./transto:/src/transto
-    depends_on:
-      - transto

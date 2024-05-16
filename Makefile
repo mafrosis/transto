@@ -1,12 +1,15 @@
 .PHONY: lint
 lint:
-	docker compose run --rm --entrypoint=pylint test /src/transto
+	hatch fmt --preview
 
 .PHONY: typecheck
 typecheck:
-	docker compose run --rm test --mypy /src/transto
+	hatch run test:mypy
+
+.PHONY: test
+test:
+	hatch run test:test
 
 .PHONY: dist
 dist:
-	pip install wheel build
-	python -m build
+	hatch build
