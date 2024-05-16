@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 import gspread
 from gspread_dataframe import set_with_dataframe as set_with_dataframe_
-from gspread_formatting import cellFormat
+from gspread_formatting import format_cell_range, cellFormat, numberFormat, textFormat
 from gspread_formatting.dataframe import BasicFormatter, format_with_dataframe
 import pandas as pd
 
@@ -60,19 +60,30 @@ def main(vestfile: str, sellfile: str):
 
     # Grants
     sh.update('A1', [['Grants']])
+    fmt_set_bold(sh, 'A1')
     set_with_dataframe(sh, grants, row=2)
+    fmt_set_leftalign(sh, 'A2:D2')
 
     # Vests
     sh.update(f'A{len(grants)+4}', [['Vests']])
+    fmt_set_bold(sh, f'A{len(grants)+4}')
     set_with_dataframe(sh, vests, row=len(grants)+5)
+    fmt_set_decimal(sh, f'E{len(grants)+6}:E', 4)
+    fmt_set_aud(sh, f'F{len(grants)+6}:F')
+    fmt_set_leftalign(sh, f'A{len(grants)+5}:F{len(grants)+5}')
 
     # ESPP
     sh.update('H1', [['ESPP']])
+    fmt_set_bold(sh, 'H1')
     set_with_dataframe(sh, espp, row=2, col=char_to_col('H'))
+    fmt_set_aud(sh, f'L3:M{len(espp)+3}')
+    fmt_set_leftalign(sh, 'H2:M2')
 
     # Sales
     sh.update(f'H{len(espp)+4}', [['Sales']])
+    fmt_set_bold(sh, f'H{len(espp)+4}')
     set_with_dataframe(sh, rs, row=len(espp)+5, col=char_to_col('H'))
+    fmt_set_leftalign(sh, f'H{len(espp)+5}:R{len(espp)+5}')
 
 
 def set_with_dataframe(sh: gspread.Worksheet, df: pd.DataFrame, row: int=1, col: int=1):
@@ -90,6 +101,32 @@ def set_with_dataframe(sh: gspread.Worksheet, df: pd.DataFrame, row: int=1, col:
 
     set_with_dataframe_(sh, df, row=row, col=col)
     format_with_dataframe(sh, df, df_fmtr, row=row, col=col, include_column_header=False)
+
+
+def fmt_set_bold(sh: gspread.Worksheet, range_: str):
+    'Set bold text on range of cells'
+    format_cell_range(sh, range_, cellFormat(textFormat=textFormat(bold=True)))
+
+
+def fmt_set_decimal(sh: gspread.Worksheet, range_: str, places: int):
+    'Set decimal format on range of cells'
+    format_cell_range(sh, range_, cellFormat(
+        numberFormat=numberFormat(type='TEXT', pattern=f'0.{"0"*places}'),
+        horizontalAlignment='RIGHT',
+    ))
+
+
+def fmt_set_aud(sh: gspread.Worksheet, range_: str):
+    'Set AUD currency format on range of cells'
+    format_cell_range(sh, range_, cellFormat(
+        numberFormat=numberFormat(type='CURRENCY', pattern='$ ##0.00'),
+        horizontalAlignment='RIGHT',
+    ))
+
+
+def fmt_set_leftalign(sh: gspread.Worksheet, range_: str):
+    'Set left alignment on range of cells'
+    format_cell_range(sh, range_, cellFormat(horizontalAlignment='LEFT'))
 
 
 def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
