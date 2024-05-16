@@ -3,7 +3,10 @@ import dataclasses
 import decimal
 from typing import Optional, Tuple
 
-from gspread_dataframe import set_with_dataframe
+import gspread
+from gspread_dataframe import set_with_dataframe as set_with_dataframe_
+from gspread_formatting import cellFormat
+from gspread_formatting.dataframe import BasicFormatter, format_with_dataframe
 import pandas as pd
 
 from transto.auth import gsuite as auth_gsuite
@@ -70,6 +73,23 @@ def main(vestfile: str, sellfile: str):
     # Sales
     sh.update(f'F{len(espp)+4}', [['Sales']])
     set_with_dataframe(sh, rs, row=len(espp)+5, col=char_to_col('F'))
+
+
+def set_with_dataframe(sh: gspread.Worksheet, df: pd.DataFrame, row: int=1, col: int=1):
+    'Set a DataFrame on a Google Sheet'
+    class Formatter(BasicFormatter):
+        def format_for_column(self, column, col_number, dataframe):
+            'https://numpy.org/doc/stable/reference/generated/numpy.dtype.kind.html'
+            # M type is numpy datetime
+            if column.dtype.kind == 'M':
+                return cellFormat(numberFormat=self.date_format, horizontalAlignment='RIGHT')
+            else:
+                return super().format_for_column(column, col_number, dataframe)
+
+    df_fmtr = Formatter(decimal_format='$ #,##0.00', date_format='yyyy-mm-dd')
+
+    set_with_dataframe_(sh, df, row=row, col=col)
+    format_with_dataframe(sh, df, df_fmtr, row=row, col=col, include_column_header=False)
 
 
 def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
