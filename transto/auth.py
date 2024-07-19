@@ -17,7 +17,8 @@ def gsuite():
     if not oauth_creds_path:
         raise MissingGsuiteOauthCreds
 
-    return gspread.oauth(
-        credentials_filename=oauth_creds_path,
-        authorized_user_filename='authorized_user.json'
-    )
+    with open(oauth_creds_path) as f:
+        if 'service_account' in f.read():
+            return gspread.service_account(filename=oauth_creds_path)
+
+    return gspread.oauth(credentials_filename=oauth_creds_path)
