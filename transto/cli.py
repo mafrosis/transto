@@ -27,9 +27,10 @@ def cli(debug):
 
 
 @cli.command()
-def recat():
+@click.option('--sheet', default=None, type=click.Choice(['credit', 'offset']))
+def recat(sheet: str | None):
     'Re-categorise all transactions'
-    recategorise()
+    recategorise(sheet)
 
 
 @cli.command()

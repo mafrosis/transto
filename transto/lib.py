@@ -144,11 +144,14 @@ def write(sheet, df: pd.DataFrame):
     format_cell_range(sheet, 'C', cellFormat(numberFormat={'type' : 'TEXT'}))
 
 
-def recategorise():
+def recategorise(sheet_name: str | None):
     def recat(sheet_name: str):
         'Fetch, re-match, push'
         upstream, sheet = fetch_transactions_sheet(sheet_name)
         write(sheet, match(upstream))
 
-    for sh in ('credit', 'offset'):
-        recat(sh)
+    if sheet_name:
+        recat(sheet_name)
+    else:
+        for sh in ('credit', 'offset',):
+            recat(sh)
