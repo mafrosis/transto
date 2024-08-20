@@ -10,6 +10,8 @@ from pypdf import PdfReader
 from transto.exceptions import MissingHsbcPdfPassword
 from transto.lib import commit, match
 
+pd.set_option('future.no_silent_downcasting', True)
+
 
 logger = logging.getLogger('transto')
 
