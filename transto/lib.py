@@ -29,15 +29,15 @@ def match(df):
         return '', '', ''
 
     # Include mandatory columns
-    if not 'override' in df.columns:
-        df['override'] = pd.Series(dtype='int')
-    if not 'topcat' in df.columns:
+    if 'override' not in df.columns:
+        df['override'] = False
+    if 'topcat' not in df.columns:
         df['topcat'] = pd.Series(dtype='str')
         df['seccat'] = pd.Series(dtype='str')
         df['searchterm'] = pd.Series(dtype='str')
 
     # Apply match function against all non-override transactions
-    matched = df[df.override.isnull()].apply(
+    matched = df[~df.override].apply(
         lambda row: _match(row.source), axis=1, result_type='expand'
     ).rename(
         columns={0: 'topcat', 1: 'seccat', 2: 'searchterm'}
