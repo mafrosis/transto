@@ -36,7 +36,7 @@ def main(vestfile: str, sellfile: str):
     '''
     Parse etrade reports into Google Sheets
     '''
-    sh = auth_gsuite().open_by_key(SPREADO_ID).worksheet('ESS_')
+    sh = auth_gsuite().open_by_key(SPREADO_ID).worksheet('ESS')
 
     df = pd.read_excel(
         vestfile,
@@ -47,12 +47,20 @@ def main(vestfile: str, sellfile: str):
     grants, vests = vesting(df)
 
     df = pd.read_excel(
+        vestfile,
+        sheet_name=0,
+        parse_dates=['Purchase Date', 'Grant Date'],
+        date_format='%d-%b-%Y',
+    )
+    espp = espping(df)
+
+    df = pd.read_excel(
         sellfile,
         skiprows=[1],
-        parse_dates=['Date Sold', 'Grant Date', 'Vest Date', 'Purchase Date'],
+        parse_dates=['Date Sold', 'Grant Date', 'Date Acquired'],
         date_format='%m/%d/%Y',
     )
-    rs, espp = selling(df)
+    rs = selling(df, len(espp)+6)
 
     def char_to_col(char: str) -> int:
         'Convert a character to a column number'
@@ -76,8 +84,8 @@ def main(vestfile: str, sellfile: str):
     sh.update('H1', [['ESPP']])
     fmt_set_bold(sh, 'H1')
     set_with_dataframe(sh, espp, row=2, col=char_to_col('H'))
-    fmt_set_aud(sh, f'L3:M{len(espp)+3}')
-    fmt_set_leftalign(sh, 'H2:M2')
+    fmt_set_aud(sh, f'N3:R{len(espp)+3}')
+    fmt_set_leftalign(sh, 'H2:R2')
 
     # Sales
     sh.update(f'H{len(espp)+4}', [['Sales']])
@@ -207,10 +215,10 @@ def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     return df_grants, df_vests
 
 
-def selling(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    'Parse the selling data and put into Google Sheets'
-    df_rs = df[df['Plan Type'] == 'RS'][[
-        'Date Sold', 'Vest Date', 'Qty.', 'Adjusted Cost Basis Per Share', 'Total Proceeds',
+def selling(df: pd.DataFrame, offset: int) -> pd.DataFrame:
+    'Parse the selling data, and return as DataFrame'
+    df_rs = df[[
+        'Date Sold', 'Date Acquired', 'Qty.', 'Adjusted Cost Basis Per Share', 'Total Proceeds',
         'Proceeds Per Share', 'Adjusted Gain/Loss Per Share', 'Adjusted Gain/Loss',
         'Capital Gains Status', 'Grant Number',
     ]].rename(
@@ -224,27 +232,44 @@ def selling(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         }
     ).reset_index(drop=True)
 
-    df_espp = df[df['Plan Type'] == 'ESPP'][[
-        'Purchase Date', 'Purchase Price', 'Purchase Date Fair Mkt. Value', 'Qty.',
-        'Ordinary Income Recognized Per Share', 'Ordinary Income Recognized'
+    # Mark ESPP sales
+    df_rs['Grant Number'] = df_rs['Grant Number'].fillna('ESPP')
+
+    # Create formula columns
+    df_rs.insert(2, '30 Day Rule', df_rs.apply(
+        lambda x: f'=IF(H{x.name+offset}<I{x.name+offset}+30, "Yes", "No")', axis=1
+    ))
+
+    return df_rs
+
+
+def espping(df: pd.DataFrame) -> pd.DataFrame:
+    'Parse the ESPP data, and return as DataFrame'
+    df_espp = df[df['Record Type'] == 'Purchase'][[
+        'Grant Date', 'Grant Date FMV', 'Purchase Date', 'Purchased Qty.', 'Purchase Price',
+        'Purchase Date FMV',
     ]].rename(
-        columns={
-            'Qty.': 'Qty',
-            'Purchase Date Fair Mkt. Value': 'Market Value',
-            'Ordinary Income Recognized Per Share': 'Income Per Share',
-            'Ordinary Income Recognized': 'Total Income',
-        }
+        columns={'Purchased Qty.': 'Qty'}
     ).reset_index(drop=True)
+
+    # Fix column types
+    df_espp['Qty'] = df_espp['Qty'].astype(int)
+    df_espp['Purchase Date FMV'] = df_espp['Purchase Date FMV'].apply(
+        lambda x: decimal.Decimal(x[1:])
+    ).astype(float)
 
     # Create formula columns
     df_espp['Income Per Share'] = df_espp.apply(
-        lambda x: f'=J{x.name+3}-I{x.name+3}', axis=1
+        lambda x: f'=M{x.name+3}-L{x.name+3}', axis=1
     )
     df_espp['Total Income'] = df_espp.apply(
-        lambda x: f'=L{x.name+3}*K{x.name+3}', axis=1
+        lambda x: f'=K{x.name+3}*N{x.name+3}', axis=1
     )
-    df_rs.insert(2, '30 Day Rule', df_rs.apply(
-        lambda x: f'=IF(H{x.name+len(df_espp)+6}<I{x.name+len(df_espp)+6}+30, "Yes", "No")', axis=1
-    ))
+    df_espp['Total Cost USD'] = df_espp.apply(
+        lambda x: f'=K{x.name+3}*L{x.name+3}', axis=1
+    )
+    df_espp['Total Cost AUD'] = df_espp.apply(
+        lambda x: f'=P{x.name+3}*1/VLOOKUP(J{x.name+3}, RBA!$A:$B, 2, True)', axis=1
+    )
 
-    return df_rs, df_espp
+    return df_espp

@@ -79,15 +79,15 @@ def etrade(vestfile: str, cgfile: str):
     \b
     Vesting report:
     - At Work > My Account > Benefit History
-    - Download Expanded
+    - Click Download > Download Expanded
 
     \b
     Capital gain report:
     - At Work > My Account > Gains & Losses
-    - Choose 'Custom Date'
+    - Select "Custom Date" in the "Tax Year" dropdown
     - Enter '01/01/2021' as the start date
-    - Apply
-    - Download Expanded
+    - Click Apply
+    - Click Download > Download Expanded
 
     \b
     VESTFILE - Vesting report from etrade
