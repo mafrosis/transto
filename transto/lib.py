@@ -32,9 +32,9 @@ def match(df):
     if 'override' not in df.columns:
         df['override'] = False
     if 'topcat' not in df.columns:
-        df['topcat'] = pd.Series(dtype='str')
-        df['seccat'] = pd.Series(dtype='str')
-        df['searchterm'] = pd.Series(dtype='str')
+        df['topcat'] = pd.Series(dtype=str)
+        df['seccat'] = pd.Series(dtype=str)
+        df['searchterm'] = pd.Series(dtype=str)
 
     # Apply match function against all non-override transactions
     matched = df[~df.override].apply(
