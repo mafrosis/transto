@@ -2,10 +2,14 @@ import datetime
 import io
 import logging
 import os
+import warnings
 from typing import Any, List
 
 import pandas as pd
-from pypdf import PdfReader
+from cryptography.utils import CryptographyDeprecationWarning
+
+with warnings.catch_warnings(action='ignore', category=CryptographyDeprecationWarning):
+    from pypdf import PdfReader
 from zoneinfo import ZoneInfo
 
 from transto.exceptions import MissingHsbcPdfPassword
