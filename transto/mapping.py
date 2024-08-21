@@ -1,10 +1,10 @@
 import functools
+import re
 from typing import Dict, List
 
-from gspread_dataframe import get_as_dataframe, set_with_dataframe
 import pandas as pd
-import re
 import yaml
+from gspread_dataframe import get_as_dataframe, set_with_dataframe
 
 from transto import SPREADO_ID
 from transto.auth import gsuite as auth_gsuite
@@ -14,7 +14,7 @@ from transto.auth import gsuite as auth_gsuite
 def load_mapping() -> dict:
     'Load transaction mapping data'
     # Fetch mapping as DataFrame
-    df = get_as_dataframe(_get_mapping_sheet(), usecols=[0,1,2])
+    df = get_as_dataframe(_get_mapping_sheet(), usecols=[0, 1, 2])
 
     # Convert tablular data to a tree
     mapping: Dict[str, Dict[str, List[str]]] = {}
@@ -64,7 +64,7 @@ def write_yaml_from_mapping_sheet():
     mapping = load_mapping()
 
     class Dumper(yaml.Dumper):
-        def increase_indent(self, *args, flow=False, **kwargs):  # pylint: disable=unused-argument
+        def increase_indent(self, *args, flow=False, **kwargs):  # noqa: ARG002
             return super().increase_indent(flow=flow, indentless=False)
 
     # Inject newline above topcat

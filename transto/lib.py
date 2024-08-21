@@ -4,14 +4,13 @@ import re
 from typing import Tuple
 
 import gspread
+import pandas as pd
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from gspread_formatting import cellFormat, format_cell_range
-import pandas as pd
 
 from transto import SPREADO_ID
 from transto.auth import gsuite as auth_gsuite
 from transto.mapping import load_mapping
-
 
 logger = logging.getLogger('transto')
 
@@ -37,15 +36,19 @@ def match(df):
         df['searchterm'] = pd.Series(dtype=str)
 
     # Apply match function against all non-override transactions
-    matched = df[~df.override].apply(
-        lambda row: _match(row.source), axis=1, result_type='expand'
-    ).rename(
-        columns={0: 'topcat', 1: 'seccat', 2: 'searchterm'}
+    matched = (
+        df[~df.override]
+        .apply(lambda row: _match(row.source), axis=1, result_type='expand')
+        .rename(columns={0: 'topcat', 1: 'seccat', 2: 'searchterm'})
     )
     df.update(matched)
 
     # Any deposit which is not a transfer, is a refund
-    df.loc[(df.amount.gt(0)) & (~df['topcat'].isin(['transfer','income'])), ['topcat', 'seccat', 'searchterm']] = ['transfer', 'refund', 'n/a']
+    df.loc[(df.amount.gt(0)) & (~df['topcat'].isin(['transfer', 'income'])), ['topcat', 'seccat', 'searchterm']] = [
+        'transfer',
+        'refund',
+        'n/a',
+    ]
 
     return df
 
@@ -60,7 +63,7 @@ def deduplicate(df: pd.DataFrame):
         if f'{row.date}{row.amount}{row.source}' != prev:
             count = 0
         count += 1
-        df.loc[df.index==i, 'source'] += f' {count}'
+        df.loc[df.index == i, 'source'] += f' {count}'
         prev = f'{row.date}{row.amount}{row.source}'
 
 
@@ -110,7 +113,7 @@ def commit(df: pd.DataFrame, provider: str, sheet_name: str):
 
     # Add the hash to imported data
     df['hash'] = df.apply(
-        lambda x: hashlib.sha256(f"{x['date']}{x['amount']}{x['source']}".encode('utf8')).hexdigest(),
+        lambda x: hashlib.sha256(f"{x['date']}{x['amount']}{x['source']}".encode()).hexdigest(),
         axis=1,
     )
 
@@ -128,20 +131,20 @@ def commit(df: pd.DataFrame, provider: str, sheet_name: str):
 def write(sheet, df: pd.DataFrame):
     'Persist the current DataFrame to gsheets'
     # Deterministic sort, and clean up index
-    df = df.sort_values(by=['date','hash'], ascending=False).reset_index(drop=True)
+    df = df.sort_values(by=['date', 'hash'], ascending=False).reset_index(drop=True)
 
     # Add the seccat dropdown formula column, based on the index
     df['seccat_formula'] = df.apply(
-        lambda row: f"=transpose(filter('mapping-agg'!B:B,'mapping-agg'!A:A=D{row.name+2}))",
+        lambda row: f"=transpose(filter('mapping-agg'!B:B,'mapping-agg'!A:A=D{row.name + 2}))",
         axis=1,
     )
 
     # Write the DataFrame to gsheets and escape the plus prefix
     set_with_dataframe(sheet, df, string_escaping=re.compile(r'^[+].*').search)
 
-    format_cell_range(sheet, 'A', cellFormat(numberFormat={'type' : 'DATE', 'pattern': 'yyyy-mm-dd'}))
-    format_cell_range(sheet, 'B', cellFormat(numberFormat={'type' : 'CURRENCY', 'pattern': '$####.00'}))
-    format_cell_range(sheet, 'C', cellFormat(numberFormat={'type' : 'TEXT'}))
+    format_cell_range(sheet, 'A', cellFormat(numberFormat={'type': 'DATE', 'pattern': 'yyyy-mm-dd'}))
+    format_cell_range(sheet, 'B', cellFormat(numberFormat={'type': 'CURRENCY', 'pattern': '$####.00'}))
+    format_cell_range(sheet, 'C', cellFormat(numberFormat={'type': 'TEXT'}))
 
 
 def recategorise(sheet_name: str | None):
@@ -153,5 +156,8 @@ def recategorise(sheet_name: str | None):
     if sheet_name:
         recat(sheet_name)
     else:
-        for sh in ('credit', 'offset',):
+        for sh in (
+            'credit',
+            'offset',
+        ):
             recat(sh)

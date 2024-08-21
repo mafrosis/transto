@@ -21,7 +21,7 @@ def bom(df):
     df.drop(columns=['Date'], inplace=True)
 
     # Make Debits negative & merge Credits into Debit column
-    df['Debit'] = df['Debit'] * -1
+    df['Debit'] *= -1
     df['amount'] = df['Debit'].fillna(df['Credit'])
     df = df.drop(columns=['Debit', 'Credit'])
 
