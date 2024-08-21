@@ -18,7 +18,19 @@ def nab(file: io.BufferedReader):
     df.rename(columns={'Amount': 'amount'}, inplace=True)
 
     # Drop useless columns
-    df.drop(columns=['Date', 'Account Number', 'Unnamed: 3', 'Transaction Details', 'Transaction Type', 'Balance', 'Category', 'Merchant Name'], inplace=True)
+    df.drop(
+        columns=[
+            'Date',
+            'Account Number',
+            'Unnamed: 3',
+            'Transaction Details',
+            'Transaction Type',
+            'Balance',
+            'Category',
+            'Merchant Name',
+        ],
+        inplace=True,
+    )
 
     df = match(df)
 

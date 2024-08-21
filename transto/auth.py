@@ -5,7 +5,6 @@ import gspread
 
 from transto.exceptions import MissingGsuiteOauthCreds
 
-
 logger = logging.getLogger('transto')
 
 
@@ -17,7 +16,7 @@ def gsuite():
     if not oauth_creds_path:
         raise MissingGsuiteOauthCreds
 
-    with open(oauth_creds_path) as f:
+    with open(oauth_creds_path, encoding='utf8') as f:
         if 'service_account' in f.read():
             return gspread.service_account(filename=oauth_creds_path)
 

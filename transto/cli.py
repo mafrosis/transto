@@ -1,16 +1,14 @@
 import io
-import os
 import logging
+import os
 
 import click
 
-
 from transto.bom import offset
-from transto.hsbc import cc
 from transto.etrade import main as process_etrade
-from transto.mapping import write_mapping_sheet_from_yaml, write_yaml_from_mapping_sheet
+from transto.hsbc import cc
 from transto.lib import recategorise
-
+from transto.mapping import write_mapping_sheet_from_yaml, write_yaml_from_mapping_sheet
 
 logger = logging.getLogger('transto')
 sh = logging.StreamHandler()
