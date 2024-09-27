@@ -81,10 +81,29 @@ def fetch_transactions_sheet(sheet_name: str) -> Tuple[pd.DataFrame, gspread.Wor
 
     try:
         # Fetch
-        upstream = get_as_dataframe(sheet)
+        upstream = get_as_dataframe(
+            sheet,
+            dtype={
+                'amount': float,
+                'source': 'string',
+                'topcat': 'string',
+                'seccat': 'string',
+                'searchterm': 'string',
+                'override': 'boolean',
+                'provider': 'string',
+                'hash': 'string',
+            },
+            parse_dates=True,
+            date_format={'date': '%Y-%m-%d'},
+            true_values=[True],
+            false_values=[False],
+        )
 
         # Cast date column to np.datetime64
         upstream['date'] = pd.to_datetime(upstream['date'], format='%Y-%m-%d')
+
+        # Remove all the Unnamed columns
+        upstream = upstream.loc[:, ~upstream.columns.str.contains('^Unnamed')]
 
     except (pd.errors.EmptyDataError, KeyError):
         upstream = pd.DataFrame()
