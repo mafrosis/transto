@@ -90,9 +90,6 @@ def cc(file: io.BufferedReader):
 
     df = pd.DataFrame(trans, columns=['date', 'card', 'source', 'amount'])
 
-    # Date formatting
-    df['date'] = pd.to_datetime(df['date'], format='%d/%m/%y')
-
     # Drop comma, dollar sign
     df['amount'] = df['amount'].replace('[$,]', '', regex=True)
 
