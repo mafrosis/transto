@@ -67,7 +67,7 @@ def deduplicate(df: pd.DataFrame):
         prev = f'{row.date}{row.amount}{row.source}'
 
 
-def fetch_transactions_sheet(sheet_name: str) -> Tuple[pd.DataFrame, gspread.Worksheet]:
+def _fetch_transactions_sheet(sheet_name: str) -> Tuple[pd.DataFrame, gspread.Worksheet]:
     '''
     Fetch the full set of transactions as a DataFrame
 
@@ -136,7 +136,7 @@ def commit(df: pd.DataFrame, provider: str, sheet_name: str):
         axis=1,
     )
 
-    upstream, sheet = fetch_transactions_sheet(sheet_name)
+    upstream, sheet = _fetch_transactions_sheet(sheet_name)
 
     # Combine imported data with upstream
     df = pd.concat([upstream, df], ignore_index=True)
@@ -169,7 +169,7 @@ def write(sheet, df: pd.DataFrame):
 def recategorise(sheet_name: str | None):
     def recat(sheet_name: str):
         'Fetch, re-match, push'
-        upstream, sheet = fetch_transactions_sheet(sheet_name)
+        upstream, sheet = _fetch_transactions_sheet(sheet_name)
         write(sheet, match(upstream))
 
     if sheet_name:
