@@ -45,13 +45,16 @@ def main(vestfile: str, sellfile: str):
     )
     grants, vests = vesting(df)
 
+    # ESPP & Sales starts in which column?
+    loffset_col = 'I'
+
     df = pd.read_excel(
         vestfile,
         sheet_name=0,
         parse_dates=['Purchase Date', 'Grant Date'],
         date_format='%d-%b-%Y',
     )
-    espp = espping(df)
+    espp = espping(df, loffset_col)
 
     df = pd.read_excel(
         sellfile,
@@ -59,11 +62,7 @@ def main(vestfile: str, sellfile: str):
         parse_dates=['Date Sold', 'Grant Date', 'Date Acquired'],
         date_format='%m/%d/%Y',
     )
-    rs = selling(df, len(espp) + 6)
-
-    def char_to_col(char: str) -> int:
-        'Convert a character to a column number'
-        return ord(char) - 64
+    rs = selling(df, len(espp) + 6, loffset_col)
 
     # Grants
     sh.update('A1', [['Grants']])
@@ -75,22 +74,36 @@ def main(vestfile: str, sellfile: str):
     sh.update(f'A{len(grants) + 4}', [['Vests']])
     fmt_set_bold(sh, f'A{len(grants) + 4}')
     set_with_dataframe(sh, vests, row=len(grants) + 5)
-    fmt_set_decimal(sh, f'E{len(grants) + 6}:E', 4)
-    fmt_set_aud(sh, f'F{len(grants) + 6}:F')
-    fmt_set_leftalign(sh, f'A{len(grants) + 5}:F{len(grants) + 5}')
+    fmt_set_decimal(sh, f'F{len(grants) + 6}:F', 4)
+    fmt_set_aud(sh, f'D{len(grants) + 6}:E')
+    fmt_set_aud(sh, f'G{len(grants) + 6}:G')
+    fmt_set_leftalign(sh, f'A{len(grants) + 5}:G{len(grants) + 5}')
+
+    loffset = char_to_col(loffset_col)
 
     # ESPP
-    sh.update('H1', [['ESPP']])
-    fmt_set_bold(sh, 'H1')
-    set_with_dataframe(sh, espp, row=2, col=char_to_col('H'))
-    fmt_set_aud(sh, f'N3:R{len(espp) + 3}')
-    fmt_set_leftalign(sh, 'H2:R2')
+    sh.update(f'{loffset_col}1', [['ESPP']])
+    fmt_set_bold(sh, f'{loffset_col}1')
+    set_with_dataframe(sh, espp, row=2, col=char_to_col(loffset_col))
+    fmt_set_aud(sh, f'{col_to_char(loffset + 4)}1:{col_to_char(loffset + 10)}{len(espp) + 3}')
+    fmt_set_leftalign(sh, f'{loffset_col}2:S2')
 
     # Sales
-    sh.update(f'H{len(espp) + 4}', [['Sales']])
-    fmt_set_bold(sh, f'H{len(espp) + 4}')
-    set_with_dataframe(sh, rs, row=len(espp) + 5, col=char_to_col('H'))
-    fmt_set_leftalign(sh, f'H{len(espp) + 5}:R{len(espp) + 5}')
+    sh.update(f'{loffset_col}{len(espp) + 4}', [['Sales']])
+    fmt_set_bold(sh, f'{loffset_col}{len(espp) + 4}')
+    set_with_dataframe(sh, rs, row=len(espp) + 5, col=char_to_col(loffset_col))
+    fmt_set_aud(sh, f'{col_to_char(loffset + 4)}{len(espp) + 3}:{col_to_char(loffset + 10)}')
+    fmt_set_leftalign(sh, f'{loffset_col}{len(espp) + 5}:{col_to_char(loffset + 12)}{len(espp) + 5}')
+
+
+def char_to_col(char: str) -> int:
+    'Convert a character to a column number'
+    return ord(char) - 64
+
+
+def col_to_char(col: int) -> str:
+    'Convert a column number to a character'
+    return chr(col + 64)
 
 
 def set_with_dataframe(sh: gspread.Worksheet, df: pd.DataFrame, row: int = 1, col: int = 1):
@@ -223,19 +236,26 @@ def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         dfv[['Grant Number', 'Vest Date', 'Vest Qty', 'Taxable USD']].sort_values('Vest Date').reset_index(drop=True)
     )
 
+    # Vertical row offset for vests
+    offset = len(df_grants) + 6
+
     # Create formula columns
-    df_vests['Exch Rate'] = df_vests.apply(
-        lambda x: f'=1/VLOOKUP(B{x.name + len(df_grants) + 6}, RBA!$A:$B, 2, True)', axis=1
-    )
-    df_vests['Taxable AUD'] = df_vests.apply(
-        lambda x: f'=D{x.name + len(df_grants) + 6}*E{x.name + len(df_grants) + 6}', axis=1
-    )
+    df_vests['Cost Basis'] = df_vests.apply(lambda x: f'=D{x.name + offset}/C{x.name + offset}', axis=1)
+    df_vests['Exch Rate'] = df_vests.apply(lambda x: f'=1/VLOOKUP(B{x.name + offset}, RBA!$A:$B, 2, True)', axis=1)
+    df_vests['Taxable AUD'] = df_vests.apply(lambda x: f'=D{x.name + offset}*F{x.name + offset}', axis=1)
 
     return df_grants, df_vests
 
 
-def selling(df: pd.DataFrame, offset: int) -> pd.DataFrame:
-    'Parse the selling data, and return as DataFrame'
+def selling(df: pd.DataFrame, offset: int, loffset_col: str) -> pd.DataFrame:
+    '''
+    Parse the selling data, and return as DataFrame
+
+    Params
+        df:           DataFrame
+        offset:       Vertical row offset
+        loffset_col:  ESPP & Sales starts in which column?
+    '''
     df_rs = (
         df[
             [
@@ -243,8 +263,8 @@ def selling(df: pd.DataFrame, offset: int) -> pd.DataFrame:
                 'Date Acquired',
                 'Qty.',
                 'Adjusted Cost Basis Per Share',
-                'Total Proceeds',
                 'Proceeds Per Share',
+                'Total Proceeds',
                 'Adjusted Gain/Loss Per Share',
                 'Adjusted Gain/Loss',
                 'Capital Gains Status',
@@ -255,7 +275,7 @@ def selling(df: pd.DataFrame, offset: int) -> pd.DataFrame:
             columns={
                 'Qty.': 'Qty',
                 'Adjusted Cost Basis Per Share': 'Cost Basis',
-                'Total Proceeds': 'Proceeds',
+                'Total Proceeds': 'Proceeds USD',
                 'Adjusted Gain/Loss Per Share': 'CG Per Share',
                 'Adjusted Gain/Loss': 'CG Total',
                 'Capital Gains Status': 'CG Status',
@@ -267,16 +287,44 @@ def selling(df: pd.DataFrame, offset: int) -> pd.DataFrame:
     # Mark ESPP sales
     df_rs['Grant Number'] = df_rs['Grant Number'].fillna('ESPP')
 
+    loffset = char_to_col(loffset_col)
+
     # Create formula columns
     df_rs.insert(
-        2, '30 Day Rule', df_rs.apply(lambda x: f'=IF(H{x.name + offset}<I{x.name + offset}+30, "Yes", "No")', axis=1)
+        2,
+        '30 Day Rule',
+        df_rs.apply(
+            lambda x: f'=IF({col_to_char(loffset)}{x.name + offset}<{col_to_char(loffset + 1)}{x.name + offset}+30, "Yes", "No")',
+            axis=1,
+        ),
     )
-
+    df_rs.insert(
+        7,
+        'Proceeds AUD',
+        df_rs.apply(
+            lambda x: f'=1/VLOOKUP({col_to_char(loffset)}{x.name + offset}, RBA!$A:$B, 2, True)*{col_to_char(loffset + 6)}{x.name + offset}',
+            axis=1,
+        ),
+    )
+    df_rs.insert(
+        10,
+        'CG Total AUD',
+        df_rs.apply(
+            lambda x: f'=1/VLOOKUP({col_to_char(loffset)}{x.name + offset}, RBA!$A:$B, 2, True)*{col_to_char(loffset + 9)}{x.name + offset}',
+            axis=1,
+        ),
+    )
     return df_rs
 
 
-def espping(df: pd.DataFrame) -> pd.DataFrame:
-    'Parse the ESPP data, and return as DataFrame'
+def espping(df: pd.DataFrame, loffset_col: str) -> pd.DataFrame:
+    '''
+    Parse the ESPP data, and return as DataFrame
+
+    Params
+        df:           DataFrame
+        loffset_col:  ESPP & Sales starts in which column?
+    '''
     df_espp = (
         df[df['Record Type'] == 'Purchase'][
             [
@@ -292,16 +340,25 @@ def espping(df: pd.DataFrame) -> pd.DataFrame:
         .reset_index(drop=True)
     )
 
+    loffset = char_to_col(loffset_col)
+
     # Fix column types
     df_espp['Qty'] = df_espp['Qty'].astype(int)
     df_espp['Purchase Date FMV'] = df_espp['Purchase Date FMV'].apply(lambda x: decimal.Decimal(x[1:])).astype(float)
 
     # Create formula columns
-    df_espp['Income Per Share'] = df_espp.apply(lambda x: f'=M{x.name + 3}-L{x.name + 3}', axis=1)
-    df_espp['Total Income'] = df_espp.apply(lambda x: f'=K{x.name + 3}*N{x.name + 3}', axis=1)
-    df_espp['Total Cost USD'] = df_espp.apply(lambda x: f'=K{x.name + 3}*L{x.name + 3}', axis=1)
+    df_espp['Income Per Share'] = df_espp.apply(
+        lambda x: f'={col_to_char(loffset + 5)}{x.name + 3}-{col_to_char(loffset + 4)}{x.name + 3}', axis=1
+    )
+    df_espp['Total Income'] = df_espp.apply(
+        lambda x: f'={col_to_char(loffset + 3)}{x.name + 3}*{col_to_char(loffset + 6)}{x.name + 3}', axis=1
+    )
+    df_espp['Total Cost USD'] = df_espp.apply(
+        lambda x: f'={col_to_char(loffset + 3)}{x.name + 3}*{col_to_char(loffset + 4)}{x.name + 3}', axis=1
+    )
     df_espp['Total Cost AUD'] = df_espp.apply(
-        lambda x: f'=P{x.name + 3}*1/VLOOKUP(J{x.name + 3}, RBA!$A:$B, 2, True)', axis=1
+        lambda x: f'={col_to_char(loffset + 8)}{x.name + 3}*1/VLOOKUP({col_to_char(loffset + 2)}{x.name + 3}, RBA!$A:$B, 2, True)',
+        axis=1,
     )
 
     return df_espp
