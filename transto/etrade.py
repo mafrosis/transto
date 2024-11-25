@@ -4,6 +4,7 @@ import decimal
 from typing import Optional, Tuple
 
 import gspread
+import numpy as np
 import pandas as pd
 from gspread_dataframe import set_with_dataframe as set_with_dataframe_
 from gspread_formatting import cellFormat, format_cell_range, numberFormat, textFormat
@@ -68,7 +69,10 @@ def main(vestfile: str, sellfile: str):
     sh.update('A1', [['Grants']])
     fmt_set_bold(sh, 'A1')
     set_with_dataframe(sh, grants, row=2)
-    fmt_set_leftalign(sh, 'A2:D2')
+    fmt_set_leftalign(sh, 'A2:G2')
+    fmt_set_rightalign(sh, f'E3:G{len(grants) + 2}')
+    fmt_set_aud(sh, f'G3:G{len(grants) + 2}')
+    fmt_set_bold(sh, f'F{len(grants) + 2}:G{len(grants) + 2}')
 
     # Vests
     sh.update(f'A{len(grants) + 4}', [['Vests']])
@@ -157,6 +161,11 @@ def fmt_set_leftalign(sh: gspread.Worksheet, range_: str):
     format_cell_range(sh, range_, cellFormat(horizontalAlignment='LEFT'))
 
 
+def fmt_set_rightalign(sh: gspread.Worksheet, range_: str):
+    'Set right alignment on range of cells'
+    format_cell_range(sh, range_, cellFormat(horizontalAlignment='RIGHT'))
+
+
 def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     'Parse the grant & vesting data, and return as DataFrames'
     grants = []
@@ -209,6 +218,22 @@ def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         .sort_values('Grant Date', ascending=False)
         .reset_index(drop=True)
     )
+
+    # Add formula columns
+    df_grants['Remaining'] = df_grants.apply(lambda x: f'=C{x.name + 3}-D{x.name + 3}', axis=1)
+    df_grants['Quarterly'] = df_grants.apply(lambda x: f'=ROUNDDOWN(C{x.name + 3}/16)', axis=1)
+    df_grants['Today Value'] = df_grants.apply(lambda x: f'=GOOGLEFINANCE("NYSE:SQ")*F{x.name + 3}', axis=1)
+
+    # Add Grants totals row
+    df_grants.loc[len(df_grants)] = [
+        '',
+        np.datetime64('NaT'),
+        np.nan,
+        np.nan,
+        '',
+        f'=SUM(F3:F{len(df_grants) + 2})',
+        f'=SUM(G3:G{len(df_grants) + 2})',
+    ]
 
     # Expand list of vests into a DataFrame
     dfv = (
