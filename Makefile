@@ -13,3 +13,7 @@ test:
 .PHONY: dist
 dist:
 	hatch build
+
+.PHONY: install
+install: dist
+	pipx install --force dist/*.whl
