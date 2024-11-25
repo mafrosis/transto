@@ -6,6 +6,7 @@ import click
 
 from transto.bom import offset
 from transto.etrade import main as process_etrade
+from transto.etrade import refresh_rba_exchange_rate_history
 from transto.hsbc import cc
 from transto.lib import recategorise
 from transto.mapping import write_mapping_sheet_from_yaml, write_yaml_from_mapping_sheet
@@ -16,7 +17,7 @@ logger.addHandler(sh)
 logger.setLevel(logging.INFO)
 
 
-@click.group()
+@click.group
 @click.option('--debug', is_flag=True, default=False)
 def cli(debug):
     # Set DEBUG logging based on ENV or --debug CLI flag
@@ -24,14 +25,14 @@ def cli(debug):
         logger.setLevel(logging.DEBUG)
 
 
-@cli.command()
+@cli.command
 @click.option('--sheet', default=None, type=click.Choice(['credit', 'offset']))
 def recat(sheet: str | None):
     'Re-categorise all transactions'
     recategorise(sheet)
 
 
-@cli.command()
+@cli.command
 @click.argument('file', type=click.File('rb'))
 def credit(file: io.BufferedReader):
     '''
@@ -49,7 +50,7 @@ def credit(file: io.BufferedReader):
     cc(file)
 
 
-@cli.command()
+@cli.command
 @click.argument('file', type=click.File('rb'))
 def current(file: io.BufferedReader):
     '''
@@ -67,10 +68,15 @@ def current(file: io.BufferedReader):
     offset(file)
 
 
-@cli.command()
+@cli.group
+def etrade():
+    pass
+
+
+@etrade.command('import')
 @click.argument('vestfile')
 @click.argument('cgfile')
-def etrade(vestfile: str, cgfile: str):
+def import_(vestfile: str, cgfile: str):
     '''
     Process the etrade vesting & selling reports.
 
@@ -94,18 +100,24 @@ def etrade(vestfile: str, cgfile: str):
     process_etrade(vestfile, cgfile)
 
 
-@cli.group()
+@etrade.command
+def rba():
+    'Import fresh exchange rate data from RBA'
+    refresh_rba_exchange_rate_history()
+
+
+@cli.group
 def mapping():
     'Subcommands to work with the transaction mapping metadata'
 
 
-@mapping.command()
+@mapping.command
 def to_yaml():
     'Write YAML to mapping sheet'
     write_yaml_from_mapping_sheet()
 
 
-@mapping.command()
+@mapping.command
 def to_gsheet():
     'Write mapping sheet from YAML'
     write_mapping_sheet_from_yaml()

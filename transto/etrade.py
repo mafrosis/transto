@@ -387,3 +387,29 @@ def espping(df: pd.DataFrame, loffset_col: str) -> pd.DataFrame:
     )
 
     return df_espp
+
+
+def refresh_rba_exchange_rate_history():
+    'Refresh the RBA exchange rate history'
+    sh = auth_gsuite().open_by_key(SPREADO_ID).worksheet('RBA')
+
+    df1 = pd.read_excel(
+        'https://www.rba.gov.au/statistics/tables/xls-hist/2018-2022.xls',
+        skiprows=11,
+        usecols=[0, 1],
+        header=None,
+        parse_dates=[0],
+        date_format=['%d-%b-%Y'],
+    )
+    df2 = pd.read_excel(
+        'https://www.rba.gov.au/statistics/tables/xls-hist/2023-current.xls',
+        skiprows=11,
+        usecols=[0, 1],
+        header=None,
+        parse_dates=[0],
+        date_format=['%d-%b-%Y'],
+    )
+    df = pd.concat([df1, df2])
+    df[0] = pd.to_datetime(df[0])
+    set_with_dataframe_(sh, df, resize=True, include_column_header=False)
+    fmt_set_decimal(sh, 'B:B', 4)
