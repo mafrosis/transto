@@ -74,8 +74,8 @@ def etrade():
 
 
 @etrade.command('import')
-@click.argument('vestfile')
-@click.argument('cgfile')
+@click.argument('vestfile', type=click.Path(exists=True))
+@click.argument('cgfile', type=click.Path(exists=True))
 def import_(vestfile: str, cgfile: str):
     '''
     Process the etrade vesting & selling reports.
