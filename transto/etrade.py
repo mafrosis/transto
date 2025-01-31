@@ -59,7 +59,6 @@ def main(vestfile: str, sellfile: str):
 
     df = pd.read_excel(
         sellfile,
-        skiprows=[1],
         parse_dates=['Date Sold', 'Grant Date', 'Date Acquired'],
         date_format='%m/%d/%Y',
     )
@@ -281,6 +280,9 @@ def selling(df: pd.DataFrame, offset: int, loffset_col: str) -> pd.DataFrame:
         offset:       Vertical row offset
         loffset_col:  ESPP & Sales starts in which column?
     '''
+    # Drop summary rows above symbols (SQ/XYZ), sort all by date sold
+    df = df[df['Record Type'] == 'Sell'].sort_values('Date Sold')
+
     df_rs = (
         df[
             [
