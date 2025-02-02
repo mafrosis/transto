@@ -70,8 +70,11 @@ def main(vestfile: str, sellfile: str):
     '''
     Parse etrade reports into Google Sheets
     '''
-    sh = auth_gsuite().open_by_key(SPREADO_ID).worksheet('ESS')
+    export(*load_csvs(vestfile, sellfile))
 
+
+def load_csvs(vestfile: str, sellfile: str) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    'Import the Etrade reports from CSV'
     df = pd.read_excel(
         vestfile,
         sheet_name=1,
@@ -94,6 +97,13 @@ def main(vestfile: str, sellfile: str):
         date_format='%m/%d/%Y',
     )
     rs = selling(df, len(espp) + 6, SALES_COLUMN)
+
+    return grants, vests, espp, rs
+
+
+def export(grants: pd.DataFrame, vests: pd.DataFrame, espp: pd.DataFrame, rs: pd.DataFrame):
+    'Export the parsed data to Google Sheets'
+    sh = auth_gsuite().open_by_key(SPREADO_ID).worksheet('ESS')
 
     # Grants
     sh.update('A1', [['Grants']])
