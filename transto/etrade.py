@@ -32,6 +32,40 @@ class Vest:
     taxable: Optional[decimal.Decimal] = None
 
 
+def to_col(char: str) -> int:
+    'Convert a character to a column number'
+    return ord(char) - 64
+
+
+def to_char(col: int) -> str:
+    'Convert a column number to a character'
+    return chr(col + 64)
+
+
+VEST_QUANTITY = 'E'
+VEST_DATE = 'B'
+VEST_TAXABLE_USD = 'D'
+VEST_EXCH_RATE = 'F'
+
+ESPP_COLUMN = 'J'
+SALES_COLUMN = ESPP_COLUMN
+
+ESPP_QUANTITY = to_char(to_col(ESPP_COLUMN)+3)
+ESPP_PURCHASE_DATE = to_char(to_col(ESPP_COLUMN)+2)
+ESPP_PURCHASE_PRICE = to_char(to_col(ESPP_COLUMN)+4)
+ESPP_PURCHASE_DATE_FMV = to_char(to_col(ESPP_COLUMN)+5)
+ESPP_INCOME_PER_SHARE = to_char(to_col(ESPP_COLUMN)+6)
+ESPP_TOTAL_COST_USD = to_char(to_col(ESPP_COLUMN)+8)
+
+SALES_QUANTITY = to_char(to_col(SALES_COLUMN)+3)
+SALES_DATE_SOLD = SALES_COLUMN
+SALES_COST_BASIS = to_char(to_col(SALES_COLUMN)+4)
+SALES_PROCEEDS_USD = to_char(to_col(SALES_COLUMN)+5)
+SALES_CG_TOTAL = to_char(to_col(SALES_COLUMN)+9)
+SALES_CG_TOTAL_AUD = to_char(to_col(SALES_COLUMN)+10)
+SALES_GRANT_NUMBER = to_char(to_col(SALES_COLUMN)+12)
+
+
 def main(vestfile: str, sellfile: str):
     '''
     Parse etrade reports into Google Sheets
@@ -46,23 +80,20 @@ def main(vestfile: str, sellfile: str):
     )
     grants, vests = vesting(df)
 
-    # ESPP & Sales starts in which column?
-    loffset_col = 'I'
-
     df = pd.read_excel(
         vestfile,
         sheet_name=0,
         parse_dates=['Purchase Date', 'Grant Date'],
         date_format='%d-%b-%Y',
     )
-    espp = espping(df, loffset_col)
+    espp = espping(df, ESPP_COLUMN)
 
     df = pd.read_excel(
         sellfile,
         parse_dates=['Date Sold', 'Grant Date', 'Date Acquired'],
         date_format='%m/%d/%Y',
     )
-    rs = selling(df, len(espp) + 6, loffset_col)
+    rs = selling(df, len(espp) + 6, SALES_COLUMN)
 
     # Grants
     sh.update('A1', [['Grants']])
@@ -74,29 +105,29 @@ def main(vestfile: str, sellfile: str):
     fmt_set_bold(sh, f'F{len(grants) + 2}:G{len(grants) + 2}')
 
     # Vests
-    sh.update(f'A{len(grants) + 4}', [['Vests']])
-    fmt_set_bold(sh, f'A{len(grants) + 4}')
-    set_with_dataframe(sh, vests, row=len(grants) + 5)
-    fmt_set_decimal(sh, f'F{len(grants) + 6}:F', 4)
-    fmt_set_aud(sh, f'D{len(grants) + 6}:E')
-    fmt_set_aud(sh, f'G{len(grants) + 6}:G')
-    fmt_set_leftalign(sh, f'A{len(grants) + 5}:G{len(grants) + 5}')
-
-    loffset = char_to_col(loffset_col)
+    VESTS_ROW = len(grants) + 4
+    sh.update(f'A{VESTS_ROW}', [['Vests']])
+    fmt_set_bold(sh, f'A{VESTS_ROW}')
+    set_with_dataframe(sh, vests, row=VESTS_ROW + 1)
+    fmt_set_decimal(sh, f'F{VESTS_ROW + 2}:F', 4)
+    fmt_set_aud(sh, f'D{VESTS_ROW + 2}:E')
+    fmt_set_aud(sh, f'G{VESTS_ROW + 2}:G')
+    fmt_set_leftalign(sh, f'A{VESTS_ROW + 1}:G{VESTS_ROW + 1}')
 
     # ESPP
-    sh.update(f'{loffset_col}1', [['ESPP']])
-    fmt_set_bold(sh, f'{loffset_col}1')
-    set_with_dataframe(sh, espp, row=2, col=char_to_col(loffset_col))
-    fmt_set_aud(sh, f'{col_to_char(loffset + 4)}1:{col_to_char(loffset + 10)}{len(espp) + 3}')
-    fmt_set_leftalign(sh, f'{loffset_col}2:S2')
+    sh.update(f'{ESPP_COLUMN}1', [['ESPP']])
+    fmt_set_bold(sh, f'{ESPP_COLUMN}1')
+    set_with_dataframe(sh, espp, row=2, col=char_to_col(ESPP_COLUMN))
+    fmt_set_aud(sh, f'{ESPP_PURCHASE_PRICE}1:{ESPP_TOTAL_COST_USD}{len(espp) + 3}')
+    fmt_set_leftalign(sh, f'{ESPP_COLUMN}2:{ESPP_TOTAL_COST_USD}2')
 
     # Sales
-    sh.update(f'{loffset_col}{len(espp) + 4}', [['Sales']])
-    fmt_set_bold(sh, f'{loffset_col}{len(espp) + 4}')
-    set_with_dataframe(sh, rs, row=len(espp) + 5, col=char_to_col(loffset_col))
-    fmt_set_aud(sh, f'{col_to_char(loffset + 4)}{len(espp) + 3}:{col_to_char(loffset + 10)}')
-    fmt_set_leftalign(sh, f'{loffset_col}{len(espp) + 5}:{col_to_char(loffset + 12)}{len(espp) + 5}')
+    SALES_ROW = len(espp) + 4
+    sh.update(f'{SALES_COLUMN}{SALES_ROW}', [['Sales']])
+    fmt_set_bold(sh, f'{SALES_COLUMN}{SALES_ROW}')
+    set_with_dataframe(sh, rs, row=SALES_ROW + 1, col=char_to_col(SALES_COLUMN))
+    fmt_set_aud(sh, f'{SALES_COST_BASIS}{SALES_ROW}:{SALES_CG_TOTAL_AUD}')
+    fmt_set_leftalign(sh, f'{SALES_COLUMN}{SALES_ROW + 2}:{SALES_GRANT_NUMBER}{SALES_ROW + 1}')
 
 
 def char_to_col(char: str) -> int:
