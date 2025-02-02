@@ -106,8 +106,7 @@ def export(grants: pd.DataFrame, vests: pd.DataFrame, espp: pd.DataFrame, rs: pd
     sh = auth_gsuite().open_by_key(SPREADO_ID).worksheet('ESS')
 
     # Grants
-    sh.update('A1', [['Grants']])
-    fmt_set_bold(sh, 'A1')
+    set_title_cell(sh, 'A1', 'Grants')
     set_with_dataframe(sh, grants, row=2)
     fmt_set_leftalign(sh, 'A2:G2')
     fmt_set_rightalign(sh, f'E3:G{len(grants) + 2}')
@@ -116,8 +115,7 @@ def export(grants: pd.DataFrame, vests: pd.DataFrame, espp: pd.DataFrame, rs: pd
 
     # Vests
     VESTS_ROW = len(grants) + 4
-    sh.update(f'A{VESTS_ROW}', [['Vests']])
-    fmt_set_bold(sh, f'A{VESTS_ROW}')
+    set_title_cell(sh, f'A{VESTS_ROW}', 'Vests')
     set_with_dataframe(sh, vests, row=VESTS_ROW + 1)
     fmt_set_decimal(sh, f'F{VESTS_ROW + 2}:F', 4)
     fmt_set_aud(sh, f'D{VESTS_ROW + 2}:E')
@@ -125,16 +123,14 @@ def export(grants: pd.DataFrame, vests: pd.DataFrame, espp: pd.DataFrame, rs: pd
     fmt_set_leftalign(sh, f'A{VESTS_ROW + 1}:G{VESTS_ROW + 1}')
 
     # ESPP
-    sh.update(f'{ESPP_COLUMN}1', [['ESPP']])
-    fmt_set_bold(sh, f'{ESPP_COLUMN}1')
+    set_title_cell(sh, f'A{ESPP_COLUMN}', 'ESPP')
     set_with_dataframe(sh, espp, row=2, col=char_to_col(ESPP_COLUMN))
     fmt_set_aud(sh, f'{ESPP_PURCHASE_PRICE}1:{ESPP_TOTAL_COST_USD}{len(espp) + 3}')
     fmt_set_leftalign(sh, f'{ESPP_COLUMN}2:{ESPP_TOTAL_COST_USD}2')
 
     # Sales
     SALES_ROW = len(espp) + 4
-    sh.update(f'{SALES_COLUMN}{SALES_ROW}', [['Sales']])
-    fmt_set_bold(sh, f'{SALES_COLUMN}{SALES_ROW}')
+    set_title_cell(sh, f'{SALES_COLUMN}{SALES_ROW}', 'Sales')
     set_with_dataframe(sh, rs, row=SALES_ROW + 1, col=char_to_col(SALES_COLUMN))
     fmt_set_aud(sh, f'{SALES_COST_BASIS}{SALES_ROW}:{SALES_CG_TOTAL_AUD}')
     fmt_set_leftalign(sh, f'{SALES_COLUMN}{SALES_ROW + 2}:{SALES_GRANT_NUMBER}{SALES_ROW + 1}')
@@ -165,6 +161,13 @@ def set_with_dataframe(sh: gspread.Worksheet, df: pd.DataFrame, row: int = 1, co
 
     set_with_dataframe_(sh, df, row=row, col=col)
     format_with_dataframe(sh, df, df_fmtr, row=row, col=col, include_column_header=False)
+
+
+def set_title_cell(sh: gspread.Worksheet, cell: str, title: str):
+    'Set a title cell'
+    sh.update(cell, [[title]])
+    fmt_set_bold(sh, cell)
+    fmt_set_leftalign(sh, cell)
 
 
 def fmt_set_bold(sh: gspread.Worksheet, range_: str):
