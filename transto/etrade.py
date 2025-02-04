@@ -183,7 +183,7 @@ def fmt_set_aud(sh: gspread.Worksheet, range_: str):
         sh,
         range_,
         cellFormat(
-            numberFormat=numberFormat(type='CURRENCY', pattern='$ ##0.00'),
+            numberFormat=numberFormat(type='CURRENCY', pattern='$ #,##0.00'),
             horizontalAlignment='RIGHT',
         ),
     )
