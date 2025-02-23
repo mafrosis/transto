@@ -91,7 +91,7 @@ def import_(vestfile: str, cgfile: str):
     Capital gain report:
     - At Work > My Account > Gains & Losses
     - Select "Custom Date" in the "Tax Year" dropdown
-    - Enter '01/01/2021' as the start date
+    - Enter '01/01/2022' as the start date
     - Click Apply
     - Click Download > Download Expanded
 

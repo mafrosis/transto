@@ -6,6 +6,7 @@ from typing import Optional, Tuple
 import gspread
 import numpy as np
 import pandas as pd
+import pytz
 from gspread_dataframe import set_with_dataframe as set_with_dataframe_
 from gspread_formatting import cellFormat, format_cell_range, numberFormat, textFormat
 from gspread_formatting.dataframe import BasicFormatter, format_with_dataframe
@@ -47,7 +48,7 @@ VEST_DATE = 'B'
 VEST_TAXABLE_USD = 'D'
 VEST_EXCH_RATE = 'F'
 
-ESPP_COLUMN = 'J'
+ESPP_COLUMN = 'K'
 SALES_COLUMN = ESPP_COLUMN
 
 ESPP_QUANTITY = to_char(to_col(ESPP_COLUMN) + 3)
@@ -73,7 +74,9 @@ def main(vestfile: str, sellfile: str):
     export(*load_csvs(vestfile, sellfile))
 
 
-def load_csvs(vestfile: str, sellfile: str) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_csvs(
+    vestfile: str, sellfile: str
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     'Import the Etrade reports from CSV'
     df = pd.read_excel(
         vestfile,
@@ -81,7 +84,7 @@ def load_csvs(vestfile: str, sellfile: str) -> Tuple[pd.DataFrame, pd.DataFrame,
         parse_dates=['Grant Date', 'Vest Date'],
         date_format={'Grant Date': '%d-%b-%Y', 'Vest Date': '%m/%d/%Y'},
     )
-    grants, vests = vesting(df)
+    grants, vests, schedule = vesting(df)
 
     df = pd.read_excel(
         vestfile,
@@ -98,23 +101,32 @@ def load_csvs(vestfile: str, sellfile: str) -> Tuple[pd.DataFrame, pd.DataFrame,
     )
     rs = selling(df, len(espp) + 6, SALES_COLUMN)
 
-    return grants, vests, espp, rs
+    return grants, vests, schedule, espp, rs
 
 
-def export(grants: pd.DataFrame, vests: pd.DataFrame, espp: pd.DataFrame, rs: pd.DataFrame):
+def export(grants: pd.DataFrame, vests: pd.DataFrame, schedule: pd.DataFrame, espp: pd.DataFrame, rs: pd.DataFrame):
     'Export the parsed data to Google Sheets'
     sh = auth_gsuite().open_by_key(SPREADO_ID).worksheet('ESS')
 
     # Grants
     set_title_cell(sh, 'A1', 'Grants')
     set_with_dataframe(sh, grants, row=2)
-    fmt_set_leftalign(sh, 'A2:G2')
-    fmt_set_rightalign(sh, f'E3:G{len(grants) + 2}')
-    fmt_set_aud(sh, f'G3:G{len(grants) + 2}')
-    fmt_set_bold(sh, f'F{len(grants) + 2}:G{len(grants) + 2}')
+    fmt_set_leftalign(sh, 'A2:H2')
+    fmt_set_rightalign(sh, f'D3:H{len(grants) + 2}')
+    fmt_set_aud(sh, f'H3:I{len(grants) + 2}')
+
+    # Vesting Schedule
+    SCHEDULE_ROW = len(grants) + 4
+    set_title_cell(sh, f'A{SCHEDULE_ROW}', 'Vesting Schedule')
+    set_with_dataframe(sh, schedule, row=SCHEDULE_ROW + 1)
+    fmt_set_leftalign(sh, f'A{SCHEDULE_ROW + 1}')
+    for x in range(3, 10, 2):
+        range_ = f'{to_char(x)}{SCHEDULE_ROW + 2}:{to_char(x)}{SCHEDULE_ROW + len(schedule) + 1}'
+        fmt_set_rightalign(sh, range_)
+        fmt_set_aud(sh, range_)
 
     # Vests
-    VESTS_ROW = len(grants) + 4
+    VESTS_ROW = SCHEDULE_ROW + len(schedule) + 3
     set_title_cell(sh, f'A{VESTS_ROW}', 'Vests')
     set_with_dataframe(sh, vests, row=VESTS_ROW + 1)
     fmt_set_decimal(sh, f'F{VESTS_ROW + 2}:F', 4)
@@ -123,7 +135,7 @@ def export(grants: pd.DataFrame, vests: pd.DataFrame, espp: pd.DataFrame, rs: pd
     fmt_set_leftalign(sh, f'A{VESTS_ROW + 1}:G{VESTS_ROW + 1}')
 
     # ESPP
-    set_title_cell(sh, f'A{ESPP_COLUMN}', 'ESPP')
+    set_title_cell(sh, f'{ESPP_COLUMN}1', 'ESPP')
     set_with_dataframe(sh, espp, row=2, col=to_col(ESPP_COLUMN))
     fmt_set_aud(sh, f'{ESPP_PURCHASE_PRICE}1:{ESPP_TOTAL_COST_USD}{len(espp) + 3}')
     fmt_set_leftalign(sh, f'{ESPP_COLUMN}2:{ESPP_TOTAL_COST_USD}2')
@@ -133,7 +145,8 @@ def export(grants: pd.DataFrame, vests: pd.DataFrame, espp: pd.DataFrame, rs: pd
     set_title_cell(sh, f'{SALES_COLUMN}{SALES_ROW}', 'Sales')
     set_with_dataframe(sh, rs, row=SALES_ROW + 1, col=to_col(SALES_COLUMN))
     fmt_set_aud(sh, f'{SALES_COST_BASIS}{SALES_ROW}:{SALES_CG_TOTAL_AUD}')
-    fmt_set_leftalign(sh, f'{SALES_COLUMN}{SALES_ROW + 2}:{SALES_GRANT_NUMBER}{SALES_ROW + 1}')
+    fmt_set_leftalign(sh, f'{SALES_COLUMN}{SALES_ROW + 1}:{SALES_GRANT_NUMBER}{SALES_ROW + 1}')
+    # fmt_set_plaintext(sh, f'{SALES_GRANT_NUMBER}{SALES_ROW + 1}:{SALES_GRANT_NUMBER}{SALES_ROW + 1}')
 
 
 def set_with_dataframe(sh: gspread.Worksheet, df: pd.DataFrame, row: int = 1, col: int = 1):
@@ -177,6 +190,11 @@ def fmt_set_decimal(sh: gspread.Worksheet, range_: str, places: int):
     )
 
 
+def fmt_set_plaintext(sh: gspread.Worksheet, range_: str):
+    'Set range of cells as plain text'
+    format_cell_range(sh, range_, cellFormat(numberFormat=numberFormat(type='TEXT')))
+
+
 def fmt_set_aud(sh: gspread.Worksheet, range_: str):
     'Set AUD currency format on range of cells'
     format_cell_range(
@@ -199,7 +217,12 @@ def fmt_set_rightalign(sh: gspread.Worksheet, range_: str):
     format_cell_range(sh, range_, cellFormat(horizontalAlignment='RIGHT'))
 
 
-def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def fmt_set_centrealign(sh: gspread.Worksheet, range_: str):
+    'Set center alignment on range of cells'
+    format_cell_range(sh, range_, cellFormat(horizontalAlignment='CENTER'))
+
+
+def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     'Parse the grant & vesting data, and return as DataFrames'
     grants = []
     vests = []
@@ -215,10 +238,6 @@ def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
             grants.append(grant)
 
         if series['Record Type'] == 'Vest Schedule':
-            # Ignore unvested shares
-            if series['Vested Qty..1'] == 0:
-                continue
-
             vest = Vest(
                 grant=grant,
                 period=series['Vest Period'],
@@ -253,9 +272,10 @@ def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     )
 
     # Add formula columns
-    df_grants['Remaining'] = df_grants.apply(lambda x: f'=C{x.name + 3}-D{x.name + 3}', axis=1)
-    df_grants['Quarterly'] = df_grants.apply(lambda x: f'=ROUNDDOWN(C{x.name + 3}/16)', axis=1)
-    df_grants['Today Value'] = df_grants.apply(lambda x: f'=GOOGLEFINANCE("NYSE:SQ")*F{x.name + 3}', axis=1)
+    df_grants['Remaining'] = df_grants.apply(lambda x: f'=D{x.name + 3}-E{x.name + 3}', axis=1)
+    df_grants['Quarterly'] = df_grants.apply(lambda x: f'=ROUNDDOWN(D{x.name + 3}/16)', axis=1)
+    df_grants['Total USD'] = df_grants.apply(lambda x: f'=Overview!B2*F{x.name + 3}', axis=1)
+    df_grants['Approx AUD'] = df_grants.apply(lambda x: f'=H{x.name + 3}*GOOGLEFINANCE("Currency:USDAUD")', axis=1)
 
     # Add Grants totals row
     df_grants.loc[len(df_grants)] = [
@@ -264,8 +284,9 @@ def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         np.nan,
         np.nan,
         '',
-        f'=SUM(F3:F{len(df_grants) + 2})',
         f'=SUM(G3:G{len(df_grants) + 2})',
+        f'=SUM(H3:H{len(df_grants) + 2})',
+        f'=SUM(I3:I{len(df_grants) + 2})',
     ]
 
     # Expand list of vests into a DataFrame
@@ -286,23 +307,96 @@ def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
         )
     )
 
+    # Add first vest column
+    df_grants = df_grants.join(dfv[dfv['Vest Period'] == 1].set_index('Grant Number')['Vest Date'], on='Grant Number')
+    df_grants.insert(2, 'First Vest', df_grants.pop('Vest Date'))
+
+    mel_tz = pytz.timezone('Australia/Melbourne')
+
+    # Create unvested grants DataFrame, filtered for current year-1 thru current year+2
+    df_unvested = dfv.copy(deep=False)
+    df_unvested['Vest Year'] = df_unvested['Vest Date'].dt.year
+    df_unvested = df_unvested[
+        (df_unvested['Vest Year'] >= datetime.datetime.now(mel_tz).year - 1)
+        & (df_unvested['Vest Year'] <= datetime.datetime.now(mel_tz).year + 2)
+    ]
+
+    # Fill in estimated vest quantity for unvested grants
+    def vest_qty_for_unvested(x):
+        if x['Vest Qty'] == 0:
+            return round(x['grant.qty'] / 16)
+        return x['Vest Qty']
+
+    df_unvested['Vest Qty'] = df_unvested.apply(vest_qty_for_unvested, axis=1)
+
+    # Determine year-on-year vesting schedule
+    df_vest_schedule = (
+        df_unvested.groupby(['Vest Year', 'Grant Number'])
+        .agg({'Vest Qty': 'sum'})
+        .reset_index()
+        .pivot(index='Grant Number', columns='Vest Year', values='Vest Qty')
+        .fillna(0)
+        .astype(int)
+        .sort_values('Grant Number', ascending=False)
+        .reset_index()
+    )
+
+    for i, year in enumerate(range(datetime.datetime.now(mel_tz).year - 1, datetime.datetime.now(mel_tz).year + 3)):
+        col_num = (i * 2) + 2
+        df_vest_schedule.insert(
+            col_num,
+            f'{year}.1',
+            [f'=Overview!$B$2*{to_char(col_num)}{len(df_grants) + 6 + x}' for x in range(len(df_grants) - 1)],
+            allow_duplicates=True,
+        )
+
+    SCHD_TOTALS_STRT = len(df_grants) + 6
+    SCHD_TOTALS_END = SCHD_TOTALS_STRT + len(df_vest_schedule) - 1
+
+    # Add Vest Schedule totals row
+    df_vest_schedule.loc[len(df_vest_schedule)] = [
+        '',
+        f'=SUM(B{SCHD_TOTALS_STRT}:B{SCHD_TOTALS_END})',
+        f'=SUM(C{SCHD_TOTALS_STRT}:C{SCHD_TOTALS_END})',
+        f'=SUM(D{SCHD_TOTALS_STRT}:D{SCHD_TOTALS_END})',
+        f'=SUM(E{SCHD_TOTALS_STRT}:E{SCHD_TOTALS_END})',
+        f'=SUM(F{SCHD_TOTALS_STRT}:F{SCHD_TOTALS_END})',
+        f'=SUM(G{SCHD_TOTALS_STRT}:G{SCHD_TOTALS_END})',
+        f'=SUM(H{SCHD_TOTALS_STRT}:H{SCHD_TOTALS_END})',
+        f'=SUM(I{SCHD_TOTALS_STRT}:I{SCHD_TOTALS_END})',
+    ]
+    # Add Vest Schedule AUD conversion totals row
+    df_vest_schedule.loc[len(df_vest_schedule)] = [
+        '',
+        '',
+        f'=C{SCHD_TOTALS_END + 1}*GOOGLEFINANCE("Currency:USDAUD")',
+        '',
+        f'=E{SCHD_TOTALS_END + 1}*GOOGLEFINANCE("Currency:USDAUD")',
+        '',
+        f'=G{SCHD_TOTALS_END + 1}*GOOGLEFINANCE("Currency:USDAUD")',
+        '',
+        f'=I{SCHD_TOTALS_END + 1}*GOOGLEFINANCE("Currency:USDAUD")',
+    ]
+
     # Add period to grant number
     dfv['Grant Number'] = dfv.apply(lambda x: f"{x['Grant Number']}-{x['Vest Period']}", axis=1)
 
     # Drop extraneous columns, sort by vest date
     df_vests = (
-        dfv[['Grant Number', 'Vest Date', 'Vest Qty', 'Taxable USD']].sort_values('Vest Date').reset_index(drop=True)
+        dfv[dfv['Vest Qty'] > 0][['Grant Number', 'Vest Date', 'Vest Qty', 'Taxable USD']]
+        .sort_values('Vest Date')
+        .reset_index(drop=True)
     )
 
     # Vertical row offset for vests
-    offset = len(df_grants) + 6
+    offset = len(df_grants) + len(df_vest_schedule) + 9
 
     # Create formula columns
     df_vests['Cost Basis'] = df_vests.apply(lambda x: f'=D{x.name + offset}/C{x.name + offset}', axis=1)
     df_vests['Exch Rate'] = df_vests.apply(lambda x: f'=1/VLOOKUP(B{x.name + offset}, RBA!$A:$B, 2, True)', axis=1)
     df_vests['Taxable AUD'] = df_vests.apply(lambda x: f'=D{x.name + offset}*F{x.name + offset}', axis=1)
 
-    return df_grants, df_vests
+    return df_grants, df_vests, df_vest_schedule
 
 
 def selling(df: pd.DataFrame, offset: int, loffset_col: str) -> pd.DataFrame:
