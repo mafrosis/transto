@@ -4,6 +4,7 @@ import os
 
 import click
 
+from transto import __version__
 from transto.bom import offset
 from transto.etrade import main as process_etrade
 from transto.etrade import refresh_rba_exchange_rate_history
@@ -18,6 +19,7 @@ logger.setLevel(logging.INFO)
 
 
 @click.group
+@click.version_option(__version__)
 @click.option('--debug', is_flag=True, default=False)
 def cli(debug):
     # Set DEBUG logging based on ENV or --debug CLI flag
