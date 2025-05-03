@@ -47,9 +47,11 @@ allow-direct-references = true
 
 
 [tool.hatch.envs.default]
+installer = "uv"
 dependencies = ["ipdb"]
 
 [tool.hatch.envs.test]
+installer = "uv"
 dependencies = [
 	"pytest",
 	"pytest-sugar",
@@ -60,12 +62,3 @@ dependencies = [
 [tool.hatch.envs.test.scripts]
 test = "pytest --disable-pytest-warnings test"
 mypy = "pytest --mypy transto"
-
-[tool.hatch.envs.lint]
-detached = true  # do not install package
-dependencies = [
-	"pylint",
-]
-
-[tool.hatch.envs.lint.scripts]
-lint = "pylint transto"
