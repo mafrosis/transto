@@ -41,7 +41,7 @@ def match(df):
         .apply(lambda row: _match(row.source), axis=1, result_type='expand')
         .rename(columns={0: 'topcat', 1: 'seccat', 2: 'searchterm'})
     )
-    df.update(matched)
+    df.loc[matched.index, ['topcat', 'seccat', 'searchterm']] = matched[['topcat', 'seccat', 'searchterm']]
 
     # Any deposit which is not a transfer, is a refund
     df.loc[(df.amount.gt(0)) & (~df['topcat'].isin(['transfer', 'income'])), ['topcat', 'seccat', 'searchterm']] = [
@@ -104,6 +104,9 @@ def _fetch_transactions_sheet(sheet_name: str) -> Tuple[pd.DataFrame, gspread.Wo
 
         # Remove all the Unnamed columns
         upstream = upstream.loc[:, ~upstream.columns.str.contains('^Unnamed')]
+
+        # Force NaN override to False
+        upstream.loc[upstream.override.isna(), 'override'] = False
 
     except (pd.errors.EmptyDataError, KeyError):
         upstream = pd.DataFrame()
