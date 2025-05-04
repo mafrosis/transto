@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import re
+import readline
 from typing import Tuple
 
 import gspread
@@ -10,7 +11,7 @@ from gspread_formatting import cellFormat, format_cell_range
 
 from transto import SPREADO_ID
 from transto.auth import gsuite as auth_gsuite
-from transto.mapping import load_mapping
+from transto.mapping import load_mapping, write_mapping
 
 logger = logging.getLogger('transto')
 
@@ -168,13 +169,17 @@ def write(sheet, df: pd.DataFrame):
     format_cell_range(sheet, 'C', cellFormat(numberFormat={'type': 'TEXT'}))
 
 
-def recategorise(sheet_name: str | None):
+def recategorise(sheet_name: str | None, interactive: bool = False):
     def recat(sheet_name: str):
         'Fetch, re-match, push'
         upstream, sheet = _fetch_transactions_sheet(sheet_name)
 
         # Run a full match
-        updated = categorise(upstream)
+        updated, count = categorise(upstream)
+        print(f'Auto-matched {count} transactions')
+
+        if interactive:
+            _interactive_categorise(updated)
 
         write(sheet, updated)
 
@@ -186,3 +191,104 @@ def recategorise(sheet_name: str | None):
             'offset',
         ):
             recat(sh)
+
+
+def _interactive_categorise(df: pd.DataFrame):
+    'Prompt user to categorize unmatched transactions'
+
+    # Get unmatched transaction sorted by frequency
+    unmatched = df[df.topcat.isnull()].copy()
+    if unmatched.empty:
+        print('Everything is categorised')
+        return
+
+    # Track if the top/sec category mapping gets modified
+    mapping_modified = False
+
+    # Count frequency of each source using groupby
+    source_count = unmatched['source'].value_counts().reset_index()
+    source_count.columns = ['source', 'count']
+
+    # Get available category
+    mapping = load_mapping()
+    top_category = list(mapping.keys())
+
+    class ExitInteractive(Exception):
+        pass
+
+    class SkipThisItem(Exception):
+        pass
+
+    def _choice(items: list[str], title: str) -> str:
+        print(f'\n{title}:')
+        for i, cat in enumerate(items, 1):
+            print(f'{i:>2}. {cat}')
+        print('s.  Skip')
+        print('q.  Quit')
+
+        while True:
+            try:
+                ch = input('> ')
+                if ch == 's':
+                    raise SkipThisItem
+                if ch == 'q':
+                    raise ExitInteractive
+                if 1 <= int(ch) <= len(items):
+                    return items[int(ch) - 1]
+                    break
+            except ValueError:
+                print('Invalid selection')
+
+    for _, row in source_count.iterrows():
+        print(40 * '-')
+        print(f'Source: {row["source"]}')
+        print(f'Count: {row["count"]}\n')
+        print(df[df['source'] == row['source']][['date', 'amount']].to_string(index=False))
+
+        try:
+            # Select top category & secondary category
+            topcat = _choice(top_category, title='Category')
+            seccat = _choice(list(mapping[topcat].keys()), title='Secondary')
+        except SkipThisItem:
+            continue
+        except ExitInteractive:
+            break
+
+        # Any manual transaction mapping will be treated as override, unless a regex pattern is created
+        override = True
+        regex_pattern = ''
+
+        # Ask if user wants to add regex pattern
+        add_regex = input('\nCreate a regex for this mapping? [y/N]: ').lower()
+        if add_regex == 'y':
+            while True:
+                # Default editable prompt to transaction source
+                readline.set_startup_hook(lambda src=row['source']: readline.insert_text(src))
+
+                try:
+                    regex_pattern = input('Enter pattern: ').strip()
+                    if not regex_pattern:
+                        break
+                    re.compile(regex_pattern)
+
+                    # Update mapping with new pattern
+                    if seccat not in mapping[topcat]:
+                        mapping[topcat][seccat] = []
+                    mapping[topcat][seccat].append(regex_pattern)
+                    mapping_modified = True
+                    override = False
+                    break
+
+                except re.error:
+                    print('Invalid regex pattern. Please try again.')
+                finally:
+                    readline.set_startup_hook()
+
+        # Update all matching transactions
+        mask = (df['source'] == row['source']) & (df['topcat'].isnull())
+        df.loc[mask, ['topcat', 'seccat', 'searchterm', 'override']] = [topcat, seccat, regex_pattern, override]
+        print(f'\nUpdated {mask.sum()} transactions to {topcat} > {seccat}')
+
+    if mapping_modified:
+        write_mapping(mapping)
+        print('Updated mapping in Google Sheets')

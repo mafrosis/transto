@@ -29,9 +29,10 @@ def cli(debug):
 
 @cli.command
 @click.option('--sheet', default=None, type=click.Choice(['credit', 'offset']))
-def recat(sheet: str | None):
+@click.option('--interactive', is_flag=True, help='Prompt for unmatched transactions')
+def recat(sheet: str | None, interactive: bool):
     'Re-categorise all transactions'
-    recategorise(sheet)
+    recategorise(sheet, interactive)
 
 
 @cli.command
