@@ -31,6 +31,27 @@ def load_mapping() -> dict:
     return mapping
 
 
+def write_mapping(mapping: dict):
+    '''
+    Write mapping dictionary back to Google Sheets
+
+    Args:
+        mapping: Dictionary in same format as returned by load_mapping()
+    '''
+    # Convert mapping dict to flattened DataFrame
+    data = [
+        {'topcat': topcat, 'seccat': seccat, 'searchterm': searchterm}
+        for topcat, seccats in mapping.items()
+        for seccat, searchterms in seccats.items()
+        for searchterm in searchterms
+    ]
+
+    df = pd.DataFrame(data).sort_values(['topcat', 'seccat', 'pattern'])
+
+    # Write to sheet
+    set_with_dataframe(_get_mapping_sheet(), df, resize=True)
+
+
 def write_mapping_sheet_from_yaml():
     'Read YAML and merge with gsheet data, before updating gsheet'
     with open('mapping.yaml', encoding='utf8') as f:
