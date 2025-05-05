@@ -13,3 +13,5 @@ authorized_user.json
 mafro-oauth-*.json
 
 mapping.yaml
+
+.aider*
