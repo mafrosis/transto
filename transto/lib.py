@@ -26,7 +26,7 @@ def categorise(df) -> pd.DataFrame:
                             return topcat, seccat, pat
                     except re.error:
                         logger.error('Failed parsing regex: %s', pat)
-        return '', '', ''
+        return pd.NA, pd.NA, pd.NA
 
     # Include mandatory columns
     if 'override' not in df.columns:
