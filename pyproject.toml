@@ -53,10 +53,12 @@ dependencies = ["ipdb"]
 [tool.hatch.envs.test]
 installer = "uv"
 dependencies = [
+	"pandas-stubs",
 	"pytest",
 	"pytest-sugar",
 	"pytest-mypy",
 	"types-click",
+	"types-PyYAML",
 ]
 
 [tool.hatch.envs.test.scripts]
