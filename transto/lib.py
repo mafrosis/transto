@@ -21,11 +21,12 @@ def categorise(df) -> pd.DataFrame:
         for topcat, categories in load_mapping().items():
             for seccat, patterns in categories.items():
                 for pat in patterns:
-                    try:
-                        if re.search('(.*)'.join(pat.split(' ')), searchterm, re.IGNORECASE):
-                            return topcat, seccat, pat
-                    except re.error:
-                        logger.error('Failed parsing regex: %s', pat)
+                    if pat:
+                        try:
+                            if re.search('(.*)'.join(pat.split(' ')), searchterm, re.IGNORECASE):
+                                return topcat, seccat, pat
+                        except re.error:
+                            logger.error('Failed parsing regex: %s', pat)
         return pd.NA, pd.NA, pd.NA
 
     # Include mandatory columns
