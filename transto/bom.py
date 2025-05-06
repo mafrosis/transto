@@ -25,7 +25,8 @@ def bom(df):
     df['amount'] = df['Debit'].fillna(df['Credit'])
     df = df.drop(columns=['Debit', 'Credit'])
 
-    return categorise(df)
+    df, _ = categorise(df)
+    return df
 
 
 def cc(file: io.BufferedReader):

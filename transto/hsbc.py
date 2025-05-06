@@ -106,8 +106,8 @@ def cc(file: io.BufferedReader):
     df['amount'] = df['credits'].fillna(df['debits']).astype(float)
     df.drop(columns=['credits', 'debits'], inplace=True)
 
-    df = categorise(df)
+    df, matched_count = categorise(df)
 
-    logger.info('Found %d transactions, and matched %s', len(df), (df['searchterm'].values != '').sum())  # noqa: PLC1901
+    logger.info('Found %d transactions, and matched %s', len(df), matched_count)
 
     commit(df, 'HSBC', 'credit')

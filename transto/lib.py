@@ -16,7 +16,7 @@ from transto.mapping import load_mapping, write_mapping
 logger = logging.getLogger('transto')
 
 
-def categorise(df) -> pd.DataFrame:
+def categorise(df) -> (pd.DataFrame, int):
     def _match(searchterm):
         for topcat, categories in load_mapping().items():
             for seccat, patterns in categories.items():
@@ -51,7 +51,7 @@ def categorise(df) -> pd.DataFrame:
         'refund',
         'n/a',
     ]
-    return df
+    return df, len(matched[~matched.topcat.isna()])
 
 
 def deduplicate(df: pd.DataFrame):

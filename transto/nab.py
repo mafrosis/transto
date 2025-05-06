@@ -32,6 +32,6 @@ def nab(file: io.BufferedReader):
         inplace=True,
     )
 
-    df = categorise(df)
+    df, _ = categorise(df)
 
     commit(df, 'NAB', 'credit')
