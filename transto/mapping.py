@@ -1,4 +1,5 @@
 import functools
+import logging
 import re
 
 import pandas as pd
@@ -7,6 +8,8 @@ from gspread_dataframe import get_as_dataframe, set_with_dataframe
 
 from transto import SPREADO_ID
 from transto.auth import gsuite as auth_gsuite
+
+logger = logging.getLogger('transto')
 
 
 @functools.lru_cache(maxsize=1)
@@ -18,6 +21,8 @@ def load_mapping() -> (dict[str, dict[str, list[str]]], dict[str, str]):
         mapping:  Nested dict of topcat->seccat->pattern
         comments: Dict of pattern->comment, which must be persisted via write_mapping
     '''
+    logger.debug('Loading category mapping..')
+
     # Fetch mapping as DataFrame
     df = get_as_dataframe(_get_mapping_sheet(), usecols=[0, 1, 2, 3], header=None)
     df.columns = ['topcat', 'seccat', 'pattern', 'comment']
@@ -39,6 +44,8 @@ def load_mapping() -> (dict[str, dict[str, list[str]]], dict[str, str]):
         mapping[item['topcat']][item['seccat']].append(item['pattern'])
         comments[item['pattern']] = item['comment']
 
+    logger.debug('Done')
+
     return mapping, comments
 
 
@@ -49,6 +56,8 @@ def write_mapping(mapping: dict[str, dict[str, list[str]]], comments: dict[str, 
     Args:
         mapping: Dict in same format as returned by load_mapping()
     '''
+    logger.debug('Writing category mapping back to gsheets..')
+
     # Convert mapping dict to flattened DataFrame
     data = [
         {'topcat': topcat, 'seccat': seccat, 'pattern': pattern, 'comment': comments.get(pattern, '')}
@@ -61,6 +70,7 @@ def write_mapping(mapping: dict[str, dict[str, list[str]]], comments: dict[str, 
 
     # Write to sheet
     set_with_dataframe(_get_mapping_sheet(), df, resize=True)
+    logger.debug('Done')
 
 
 def write_mapping_sheet_from_yaml():
