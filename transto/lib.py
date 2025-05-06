@@ -7,7 +7,6 @@ from typing import Tuple
 import gspread
 import pandas as pd
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
-from gspread_formatting import cellFormat, format_cell_range
 
 from transto import SPREADO_ID
 from transto.auth import gsuite as auth_gsuite
@@ -165,10 +164,6 @@ def write(sheet, df: pd.DataFrame):
 
     # Write the DataFrame to gsheets and escape the plus prefix
     set_with_dataframe(sheet, df, string_escaping=re.compile(r'^[+].*').search)
-
-    format_cell_range(sheet, 'A', cellFormat(numberFormat={'type': 'DATE', 'pattern': 'yyyy-mm-dd'}))
-    format_cell_range(sheet, 'B', cellFormat(numberFormat={'type': 'CURRENCY', 'pattern': '$####.00'}))
-    format_cell_range(sheet, 'C', cellFormat(numberFormat={'type': 'TEXT'}))
 
 
 def recategorise(sheet_name: str | None, interactive: bool = False):
