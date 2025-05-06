@@ -2,7 +2,7 @@ import io
 
 import pandas as pd
 
-from transto.lib import commit, match
+from transto.lib import categorise, commit
 
 
 def prepare_source(s: pd.Series) -> pd.Series:
@@ -25,7 +25,7 @@ def bom(df):
     df['amount'] = df['Debit'].fillna(df['Credit'])
     df = df.drop(columns=['Debit', 'Credit'])
 
-    return match(df)
+    return categorise(df)
 
 
 def cc(file: io.BufferedReader):

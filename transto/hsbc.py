@@ -13,7 +13,7 @@ with warnings.catch_warnings(action='ignore', category=CryptographyDeprecationWa
     pass
 
 from transto.exceptions import MissingHsbcPdfPassword
-from transto.lib import commit, match
+from transto.lib import categorise, commit
 
 pd.set_option('future.no_silent_downcasting', True)
 
@@ -106,7 +106,7 @@ def cc(file: io.BufferedReader):
     df['amount'] = df['credits'].fillna(df['debits']).astype(float)
     df.drop(columns=['credits', 'debits'], inplace=True)
 
-    df = match(df)
+    df = categorise(df)
 
     logger.info('Found %d transactions, and matched %s', len(df), (df['searchterm'].values != '').sum())  # noqa: PLC1901
 

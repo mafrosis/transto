@@ -15,7 +15,7 @@ from transto.mapping import load_mapping
 logger = logging.getLogger('transto')
 
 
-def match(df):
+def categorise(df) -> pd.DataFrame:
     def _match(searchterm):
         for topcat, categories in load_mapping().items():
             for seccat, patterns in categories.items():
@@ -49,7 +49,6 @@ def match(df):
         'refund',
         'n/a',
     ]
-
     return df
 
 
@@ -173,7 +172,11 @@ def recategorise(sheet_name: str | None):
     def recat(sheet_name: str):
         'Fetch, re-match, push'
         upstream, sheet = _fetch_transactions_sheet(sheet_name)
-        write(sheet, match(upstream))
+
+        # Run a full match
+        updated = categorise(upstream)
+
+        write(sheet, updated)
 
     if sheet_name:
         recat(sheet_name)

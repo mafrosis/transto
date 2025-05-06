@@ -2,7 +2,7 @@ import io
 
 import pandas as pd
 
-from transto.lib import commit, match
+from transto.lib import categorise, commit
 
 
 def nab(file: io.BufferedReader):
@@ -32,6 +32,6 @@ def nab(file: io.BufferedReader):
         inplace=True,
     )
 
-    df = match(df)
+    df = categorise(df)
 
     commit(df, 'NAB', 'credit')
