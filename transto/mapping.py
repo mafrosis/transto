@@ -1,6 +1,5 @@
 import functools
 import re
-from typing import Dict, List
 
 import pandas as pd
 import yaml
@@ -11,13 +10,24 @@ from transto.auth import gsuite as auth_gsuite
 
 
 @functools.lru_cache(maxsize=1)
-def load_mapping() -> dict:
-    'Load transaction mapping data'
+def load_mapping() -> (dict[str, dict[str, list[str]]], dict[str, str]):
+    '''
+    Load transaction mapping data
+
+    Returns:
+        mapping:  Nested dict of topcat->seccat->pattern
+        comments: Dict of pattern->comment, which must be persisted via write_mapping
+    '''
     # Fetch mapping as DataFrame
-    df = get_as_dataframe(_get_mapping_sheet(), usecols=[0, 1, 2])
+    df = get_as_dataframe(_get_mapping_sheet(), usecols=[0, 1, 2, 3], header=None)
+    df.columns = ['topcat', 'seccat', 'pattern', 'comment']
+
+    # Convert NA values in pattern & comment to empty string
+    df[['pattern', 'comment']] = df[['pattern', 'comment']].fillna('')
 
     # Convert tablular data to a tree
-    mapping: Dict[str, Dict[str, List[str]]] = {}
+    mapping: dict[str, dict[str, list[str]]] = {}
+    comments: dict[str, str] = {}
 
     for _, item in df.iterrows():
         if item['topcat'] not in mapping:
@@ -26,24 +36,25 @@ def load_mapping() -> dict:
         if item['seccat'] not in mapping[item['topcat']]:
             mapping[item['topcat']][item['seccat']] = []
 
-        mapping[item['topcat']][item['seccat']].append(str(item['searchterm']))
+        mapping[item['topcat']][item['seccat']].append(item['pattern'])
+        comments[item['pattern']] = item['comment']
 
-    return mapping
+    return mapping, comments
 
 
-def write_mapping(mapping: dict):
+def write_mapping(mapping: dict[str, dict[str, list[str]]], comments: dict[str, str]):
     '''
     Write mapping dictionary back to Google Sheets
 
     Args:
-        mapping: Dictionary in same format as returned by load_mapping()
+        mapping: Dict in same format as returned by load_mapping()
     '''
     # Convert mapping dict to flattened DataFrame
     data = [
-        {'topcat': topcat, 'seccat': seccat, 'searchterm': searchterm}
+        {'topcat': topcat, 'seccat': seccat, 'pattern': pattern, 'comment': comments.get(pattern, '')}
         for topcat, seccats in mapping.items()
-        for seccat, searchterms in seccats.items()
-        for searchterm in searchterms
+        for seccat, patterns in seccats.items()
+        for pattern in patterns
     ]
 
     df = pd.DataFrame(data).sort_values(['topcat', 'seccat', 'pattern'])
@@ -59,10 +70,10 @@ def write_mapping_sheet_from_yaml():
 
     # Convert YAML tree to a flattened list
     data = [
-        (topcat, seccat, searchterm)
+        (topcat, seccat, pattern)
         for topcat, seccats in sorted(tree.items())
-        for seccat, searchterms in sorted(seccats.items())
-        for searchterm in sorted(searchterms)
+        for seccat, patterns in sorted(seccats.items())
+        for pattern in sorted(patterns)
     ]
 
     sheet = _get_mapping_sheet()
@@ -72,8 +83,8 @@ def write_mapping_sheet_from_yaml():
 
     # Join YAML data with upstream gsheet to persist comments
     merged = df.merge(
-        pd.DataFrame(data, columns=['topcat', 'seccat', 'searchterm']),
-        on=['topcat', 'seccat', 'searchterm'],
+        pd.DataFrame(data, columns=['topcat', 'seccat', 'pattern']),
+        on=['topcat', 'seccat', 'pattern'],
         how='outer',
     )
 
@@ -82,7 +93,7 @@ def write_mapping_sheet_from_yaml():
 
 def write_yaml_from_mapping_sheet():
     'Pull gsheet mapping and write to YAML'
-    mapping = load_mapping()
+    mapping, _ = load_mapping()
 
     class Dumper(yaml.Dumper):
         def increase_indent(self, *args, flow=False, **kwargs):  # noqa: ARG002

@@ -18,7 +18,8 @@ logger = logging.getLogger('transto')
 
 def categorise(df) -> (pd.DataFrame, int):
     def _match(searchterm):
-        for topcat, categories in load_mapping().items():
+        mapping, _ = load_mapping()
+        for topcat, categories in mapping.items():
             for seccat, patterns in categories.items():
                 for pat in patterns:
                     if pat:
@@ -211,7 +212,7 @@ def _interactive_categorise(df: pd.DataFrame):
     source_count.columns = ['source', 'count']
 
     # Get available category
-    mapping = load_mapping()
+    mapping, pattern_comments = load_mapping()
     top_category = list(mapping.keys())
 
     class ExitInteractive(Exception):
@@ -272,6 +273,8 @@ def _interactive_categorise(df: pd.DataFrame):
                         break
                     re.compile(regex_pattern)
 
+                    pattern_comments[regex_pattern] = input('Add comment: ').strip()
+
                     # Update mapping with new pattern
                     if seccat not in mapping[topcat]:
                         mapping[topcat][seccat] = []
@@ -291,5 +294,5 @@ def _interactive_categorise(df: pd.DataFrame):
         print(f'\nUpdated {mask.sum()} transactions to {topcat} > {seccat}')
 
     if mapping_modified:
-        write_mapping(mapping)
+        write_mapping(mapping, pattern_comments)
         print('Updated mapping in Google Sheets')
