@@ -167,7 +167,7 @@ def set_with_dataframe(sh: gspread.Worksheet, df: pd.DataFrame, row: int = 1, co
 
 def set_title_cell(sh: gspread.Worksheet, cell: str, title: str):
     'Set a title cell'
-    sh.update(cell, [[title]])
+    sh.update([[title]], cell)
     fmt_set_bold(sh, cell)
     fmt_set_leftalign(sh, cell)
 
