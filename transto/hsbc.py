@@ -35,7 +35,7 @@ def parsepdf(file: io.BufferedReader) -> list[list[Any]]:
 
     parts: list[list[Any]] = [[]]
 
-    def font_matcher(text, _cm, _tm, font_dict, _font_size):
+    def font_matcher(text: str, _cm: Any, _tm: Any, font_dict: Any, _font_size: Any) -> None:
         'Accumlate text matching named font into list of lists'
         if isinstance(font_dict, dict) and font_dict.get('/BaseFont') == '/UniversLT':
             # Create a new list on every newline
