@@ -1,7 +1,6 @@
 import dataclasses
 import datetime
 import decimal
-from typing import Optional, Tuple
 
 import gspread
 import numpy as np
@@ -30,7 +29,7 @@ class Vest:
     period: int
     date: datetime.date
     qty: int
-    taxable: Optional[decimal.Decimal] = None
+    taxable: decimal.Decimal | None = None
 
 
 def to_col(char: str) -> int:
@@ -76,7 +75,7 @@ def main(vestfile: str, sellfile: str):
 
 def load_csvs(
     vestfile: str, sellfile: str
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     'Import the Etrade reports from CSV'
     df = pd.read_excel(
         vestfile,
@@ -222,7 +221,7 @@ def fmt_set_centrealign(sh: gspread.Worksheet, range_: str):
     format_cell_range(sh, range_, cellFormat(horizontalAlignment='CENTER'))
 
 
-def vesting(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def vesting(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     'Parse the grant & vesting data, and return as DataFrames'
     grants = []
     vests = []

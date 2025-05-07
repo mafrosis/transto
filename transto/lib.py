@@ -2,7 +2,6 @@ import hashlib
 import logging
 import re
 import readline
-from typing import Tuple
 
 import gspread
 import pandas as pd
@@ -15,7 +14,7 @@ from transto.mapping import load_mapping, write_mapping
 logger = logging.getLogger('transto')
 
 
-def categorise(df: pd.DataFrame) -> Tuple[pd.DataFrame, int]:
+def categorise(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     def _match(searchterm):
         mapping, _ = load_mapping()
         for topcat, categories in mapping.items():
@@ -68,7 +67,7 @@ def deduplicate(df: pd.DataFrame) -> None:
         prev = f'{row.date}{row.amount}{row.source}'
 
 
-def _fetch_transactions_sheet(sheet_name: str) -> Tuple[pd.DataFrame, gspread.Worksheet]:
+def _fetch_transactions_sheet(sheet_name: str) -> tuple[pd.DataFrame, gspread.Worksheet]:
     '''
     Fetch the full set of transactions as a DataFrame
 
