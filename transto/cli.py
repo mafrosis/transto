@@ -18,7 +18,7 @@ logger.addHandler(sh)
 logger.setLevel(logging.INFO)
 
 
-@click.group
+@click.group()
 @click.version_option(__version__)
 @click.option('--debug', is_flag=True, default=False)
 def cli(debug):
@@ -27,7 +27,7 @@ def cli(debug):
         logger.setLevel(logging.DEBUG)
 
 
-@cli.command
+@cli.command()
 @click.option('--sheet', default=None, type=click.Choice(['credit', 'offset']))
 @click.option('--interactive', is_flag=True, help='Prompt for unmatched transactions')
 def recat(sheet: str | None, interactive: bool):
@@ -35,7 +35,7 @@ def recat(sheet: str | None, interactive: bool):
     recategorise(sheet, interactive)
 
 
-@cli.command
+@cli.command()
 @click.argument('file', type=click.File('rb'))
 def credit(file: io.BufferedReader):
     '''
@@ -53,7 +53,7 @@ def credit(file: io.BufferedReader):
     cc(file)
 
 
-@cli.command
+@cli.command()
 @click.argument('file', type=click.File('rb'))
 def current(file: io.BufferedReader):
     '''
@@ -71,7 +71,7 @@ def current(file: io.BufferedReader):
     offset(file)
 
 
-@cli.group
+@cli.group()
 def etrade():
     pass
 
@@ -103,24 +103,24 @@ def import_(vestfile: str, cgfile: str):
     process_etrade(vestfile, cgfile)
 
 
-@etrade.command
+@etrade.command()
 def rba():
     'Import fresh exchange rate data from RBA'
     refresh_rba_exchange_rate_history()
 
 
-@cli.group
+@cli.group()
 def mapping():
     'Subcommands to work with the transaction mapping metadata'
 
 
-@mapping.command
+@mapping.command()
 def to_yaml():
     'Write YAML to mapping sheet'
     write_yaml_from_mapping_sheet()
 
 
-@mapping.command
+@mapping.command()
 def to_gsheet():
     'Write mapping sheet from YAML'
     write_mapping_sheet_from_yaml()
