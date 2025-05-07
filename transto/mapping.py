@@ -121,7 +121,7 @@ def write_yaml_from_mapping_sheet() -> None:
             output.append('')
 
     with open('mapping.yaml', 'w', encoding='utf8') as f:
-        f.write(output)
+        f.write('\n'.join(reversed(output)) + '\n')
 
 
 def _get_mapping_sheet():
