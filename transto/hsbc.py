@@ -3,7 +3,7 @@ import io
 import logging
 import os
 import warnings
-from typing import Any, List
+from typing import Any
 
 import pandas as pd
 from cryptography.utils import CryptographyDeprecationWarning
@@ -21,7 +21,7 @@ pd.set_option('future.no_silent_downcasting', True)
 logger = logging.getLogger('transto')
 
 
-def parsepdf(file: io.BufferedReader) -> List[List[Any]]:
+def parsepdf(file: io.BufferedReader) -> list[list[Any]]:
     '''
     Parse statement PDF into list of transactions
     '''
@@ -33,7 +33,7 @@ def parsepdf(file: io.BufferedReader) -> List[List[Any]]:
 
         reader.decrypt(hsbc_pdf_password)
 
-    parts: List[List[Any]] = [[]]
+    parts: list[list[Any]] = [[]]
 
     def font_matcher(text, _cm, _tm, font_dict, _font_size):
         'Accumlate text matching named font into list of lists'
@@ -54,7 +54,7 @@ def parsepdf(file: io.BufferedReader) -> List[List[Any]]:
         page.extract_text(visitor_text=font_matcher)
 
     # Post process into list of transactions
-    transactions = []
+    transactions: list[list[str]] = []
 
     for t in parts:
         # Handle fee items appended to another transaction

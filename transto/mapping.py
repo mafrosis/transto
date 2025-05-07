@@ -13,7 +13,7 @@ logger = logging.getLogger('transto')
 
 
 @functools.lru_cache(maxsize=1)
-def load_mapping() -> (dict[str, dict[str, list[str]]], dict[str, str]):
+def load_mapping() -> tuple[dict[str, dict[str, list[str]]], dict[str, str]]:
     '''
     Load transaction mapping data
 
@@ -73,7 +73,7 @@ def write_mapping(mapping: dict[str, dict[str, list[str]]], comments: dict[str, 
     logger.debug('Done')
 
 
-def write_mapping_sheet_from_yaml():
+def write_mapping_sheet_from_yaml() -> None:
     'Read YAML and merge with gsheet data, before updating gsheet'
     with open('mapping.yaml', encoding='utf8') as f:
         tree = yaml.safe_load(f).get('mapping')
@@ -101,7 +101,7 @@ def write_mapping_sheet_from_yaml():
     set_with_dataframe(sheet, merged, resize=True)
 
 
-def write_yaml_from_mapping_sheet():
+def write_yaml_from_mapping_sheet() -> None:
     'Pull gsheet mapping and write to YAML'
     mapping, _ = load_mapping()
 

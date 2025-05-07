@@ -15,7 +15,7 @@ from transto.mapping import load_mapping, write_mapping
 logger = logging.getLogger('transto')
 
 
-def categorise(df) -> (pd.DataFrame, int):
+def categorise(df: pd.DataFrame) -> Tuple[pd.DataFrame, int]:
     def _match(searchterm):
         mapping, _ = load_mapping()
         for topcat, categories in mapping.items():
@@ -54,7 +54,7 @@ def categorise(df) -> (pd.DataFrame, int):
     return df, len(matched[~matched.topcat.isna()])
 
 
-def deduplicate(df: pd.DataFrame):
+def deduplicate(df: pd.DataFrame) -> None:
     '''
     If same amount was spent on same day at same vendor, then we have a duplicate.
     Add a deterministic suffix to these dupes.
@@ -115,7 +115,7 @@ def _fetch_transactions_sheet(sheet_name: str) -> Tuple[pd.DataFrame, gspread.Wo
     return upstream, sheet
 
 
-def commit(df: pd.DataFrame, provider: str, sheet_name: str):
+def commit(df: pd.DataFrame, provider: str, sheet_name: str) -> None:
     '''
     Fetch, merge, push data into the upstream Google sheet
 
