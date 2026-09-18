@@ -11,6 +11,7 @@ from transto.etrade import refresh_rba_exchange_rate_history
 from transto.hsbc import cc
 from transto.lib import recategorise
 from transto.mapping import write_mapping_sheet_from_yaml, write_yaml_from_mapping_sheet
+from transto.westpac import cc as westpac_cc
 
 logger = logging.getLogger('transto')
 sh = logging.StreamHandler()
@@ -51,6 +52,23 @@ def credit(file: io.BufferedReader):
     FILE - PDF monthly statement with transactions
     '''
     cc(file)
+
+
+@cli.command()
+@click.argument('file', type=click.File('rb'))
+def westpac(file: io.BufferedReader):
+    '''
+    Categorise Westpac credit card statement PDF
+
+    \b
+    1. Log into westpac.com.au
+    2. Open the credit card account
+    3. Click "Statements" and download the monthly statement PDF
+    4. Copy the PDF into the statements directory mounted into Informa
+
+    FILE - PDF monthly statement with transactions
+    '''
+    westpac_cc(file)
 
 
 @cli.command()
